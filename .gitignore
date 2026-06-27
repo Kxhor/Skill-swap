@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.env
+*.sqlite3
+migrations/versions/
+.pytest_cache/
+.coverage
+
+# Node
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
