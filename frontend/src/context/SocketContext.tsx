@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { io, type Socket } from 'socket.io-client'
 import { useAuth } from '@/context/AuthContext'
 
-const SOCKET_URL = ''
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || ''
 
 interface SocketContextValue {
   socket: Socket | null

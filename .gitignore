@@ -19,6 +19,12 @@ dist/
 # Vercel
 .vercel/
 
+# Local deployment scripts (contain secrets)
+pa_wsgi.py
+deploy_pa.py
+setup_pa.sh
+vercel-patch.json
+
 # OS
 .DS_Store
 Thumbs.db
