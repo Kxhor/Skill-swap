@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import generate_csrf
@@ -11,7 +12,17 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/csrf-token", methods=["GET"])
 def get_csrf_token():
-    return jsonify({"csrf_token": generate_csrf()})
+    token = generate_csrf()
+    resp = jsonify({"csrf_token": token})
+    resp.set_cookie(
+        "csrf_token",
+        token,
+        max_age=3600,
+        secure=os.environ.get("FLASK_ENV") == "production",
+        samesite="None" if os.environ.get("FLASK_ENV") == "production" else "Lax",
+        httponly=False,
+    )
+    return resp
 
 
 @auth_bp.route("/register", methods=["POST"])
