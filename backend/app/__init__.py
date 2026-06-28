@@ -18,7 +18,7 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["DEBUG"] = os.environ.get("FLASK_ENV") == "development"
-    # Exempt SocketIO handshake from CSRF (uses its own transport)
+    app.config["WTF_CSRF_SSL_STRICT"] = False
     app.config["WTF_CSRF_EXEMPT_LIST"] = ["/socket.io/*"]
     if os.environ.get("FLASK_ENV") == "production":
         app.config["SESSION_COOKIE_SAMESITE"] = "None"
@@ -31,6 +31,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
+
     csrf.init_app(app)
 
     @app.errorhandler(CSRFError)
@@ -98,10 +99,23 @@ def create_app():
     app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
+    # ── Auto-create tables (production first-run) ──────────────────────────
+    with app.app_context():
+        import sys as _sys
+        try:
+            db.create_all()
+        except Exception as _e:
+            print(f"[startup] db.create_all failed: {_e}", file=_sys.stderr)
+
     # ── Health check ────────────────────────────────────────────────────────
     @app.get("/health")
     def health():
-        return {"status": "ok"}
+        try:
+            from flask import session as _s
+            db.session.execute(db.text("SELECT 1"))
+            return {"status": "ok", "db": "connected"}
+        except Exception as e:
+            return {"status": "degraded", "db": str(e)}, 500
 
     # ── CLI commands ────────────────────────────────────────────────────────
     _register_cli(app)

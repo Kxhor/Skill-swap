@@ -25,6 +25,9 @@ deploy_pa.py
 setup_pa.sh
 vercel-patch.json
 
+# Debug files
+debug_endpoint.py
+
 # OS
 .DS_Store
 Thumbs.db
