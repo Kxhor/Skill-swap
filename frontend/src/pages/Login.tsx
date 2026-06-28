@@ -27,11 +27,11 @@ export default function Login() {
 
   const handleDemoLogin = async () => {
     setEmail('alice@test.com')
-    setPassword('password123')
+    setPassword('Test1234!')
     setError('')
     setLoading(true)
     try {
-      await login('alice@test.com', 'password123')
+      await login('alice@test.com', 'Test1234!')
       navigate('/dashboard')
     } catch {
       setError('Demo login failed')

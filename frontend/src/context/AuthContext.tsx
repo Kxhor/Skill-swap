@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import api from '@/lib/api'
+import api, { setCsrfToken } from '@/lib/api'
 import type { User } from '@/lib/types'
 
 interface AuthContextValue {
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api.get('/auth/csrf-token')
+      .then((res) => setCsrfToken(res.data.csrf_token))
       .then(() => api.get('/auth/me'))
       .then((res) => {
         const data = res.data

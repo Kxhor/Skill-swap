@@ -1,8 +1,9 @@
 import axios from 'axios'
 
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
-  return match ? decodeURIComponent(match[2]) : null
+let csrfToken: string | null = null
+
+export function setCsrfToken(token: string) {
+  csrfToken = token
 }
 
 const api = axios.create({
@@ -13,9 +14,8 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (config.method && !['get', 'head', 'options'].includes(config.method)) {
-    const token = getCookie('csrf_token')
-    if (token) {
-      config.headers['X-CSRFToken'] = token
+    if (csrfToken) {
+      config.headers['X-CSRFToken'] = csrfToken
     }
   }
   return config
