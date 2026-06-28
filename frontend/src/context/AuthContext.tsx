@@ -19,7 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/auth/me')
+    api.get('/auth/csrf-token')
+      .then(() => api.get('/auth/me'))
       .then((res) => {
         const data = res.data
         if (data.user) setUser(data.user)
