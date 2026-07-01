@@ -25,30 +25,16 @@ export default function Login() {
     }
   }
 
-  const handleDemoLogin = async () => {
-    setEmail('alice@test.com')
-    setPassword('Test1234!')
-    setError('')
-    setLoading(true)
-    try {
-      await login('alice@test.com', 'Test1234!')
-      navigate('/dashboard')
-    } catch {
-      setError('Demo login failed')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-white to-accent/5 p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary">Skill Swap</h1>
           <p className="text-text-muted mt-2">Learn together, grow together</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-border p-8">
+        <div className="glass-card p-8">
           <h2 className="text-xl font-semibold mb-6">Sign in</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -61,7 +47,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full glass-input px-3 py-2.5 text-sm"
                 required
               />
             </div>
@@ -75,25 +61,18 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full glass-input px-3 py-2.5 text-sm"
                 required
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-danger bg-red-50 rounded-lg px-3 py-2">{error}</p>
-            )}
+              {error && <p className="text-sm text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{error}</p>}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" variant="primary" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
 
-          <div className="mt-4">
-            <Button variant="outline" className="w-full" onClick={handleDemoLogin}>
-              Demo Login (Alice)
-            </Button>
-          </div>
 
           <p className="text-center text-sm text-text-muted mt-6">
             Don't have an account?{' '}

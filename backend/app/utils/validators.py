@@ -62,10 +62,12 @@ def validate_location(location):
     return True, ""
 
 
+import bleach
+
 def sanitize_text(text, max_length=1000):
     if not text:
         return ""
-    text = re.sub(r'<[^>]+>', '', text)
+    text = bleach.clean(text, strip=True)
     if len(text) > max_length:
         text = text[:max_length]
     return text.strip()

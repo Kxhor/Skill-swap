@@ -7,10 +7,10 @@ class SwapRequest(db.Model):
     __tablename__ = "swap_requests"
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    sender_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    receiver_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    offered_skill_id = db.Column(db.String(36), db.ForeignKey("user_skills.id", ondelete="CASCADE"), nullable=False)
-    wanted_skill_id = db.Column(db.String(36), db.ForeignKey("user_skills.id", ondelete="CASCADE"), nullable=False)
+    sender_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    receiver_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    offered_skill_id = db.Column(db.String(36), db.ForeignKey("user_skills.id", ondelete="CASCADE"), nullable=False, index=True)
+    wanted_skill_id = db.Column(db.String(36), db.ForeignKey("user_skills.id", ondelete="CASCADE"), nullable=False, index=True)
     status = db.Column(
         db.Enum("pending", "accepted", "rejected", "completed", "cancelled", name="swap_status"),
         default="pending",

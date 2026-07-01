@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import { useAuth } from '@/context/AuthContext'
+import { useQueryClient } from '@tanstack/react-query'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || ''
 
@@ -20,6 +21,7 @@ const SocketContext = createContext<SocketContextValue>({
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
   const [connected, setConnected] = useState(false)
   const [notificationCount, setNotificationCount] = useState(0)
@@ -49,7 +51,20 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setConnected(true)
       socket.emit('join', { room: `user_${user.id}` })
     }
-    const onNotification = () => setNotificationCount((c) => c + 1)
+    const onNotification = (data: any) => {
+      setNotificationCount((c) => c + 1)
+      if (data?.type === 'new_swap_request' || data?.type === 'swap_accepted') {
+        queryClient.invalidateQueries({ queryKey: ['swaps'] })
+      }
+    }
+    const onSwapStatusChanged = (_data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['swaps'] })
+    }
+    const onNewMessage = (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['messages', data.swap_id] })
+      queryClient.invalidateQueries({ queryKey: ['swaps'] })
+      queryClient.invalidateQueries({ queryKey: ['unread_chats_count'] })
+    }
     const onUserOnline = (data: { user_id: string }) => {
       if (data.user_id !== user.id) {
         setOnlineUsers((prev) => new Set(prev).add(data.user_id))
@@ -67,6 +82,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socket.on('disconnect', onDisconnect)
     socket.on('reconnect', onReconnect)
     socket.on('notification', onNotification)
+    socket.on('swap_status_changed', onSwapStatusChanged)
+    socket.on('swap_accepted', onSwapStatusChanged)
+    socket.on('new_message', onNewMessage)
     socket.on('user_online', onUserOnline)
     socket.on('user_offline', onUserOffline)
 
@@ -75,6 +93,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socket.off('disconnect', onDisconnect)
       socket.off('reconnect', onReconnect)
       socket.off('notification', onNotification)
+      socket.off('swap_status_changed', onSwapStatusChanged)
+      socket.off('swap_accepted', onSwapStatusChanged)
+      socket.off('new_message', onNewMessage)
       socket.off('user_online', onUserOnline)
       socket.off('user_offline', onUserOffline)
       socket.disconnect()

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.user import User
 from app.models.feedback import Feedback
 from app.models.swap_request import SwapRequest
@@ -18,6 +18,7 @@ def _reject_admin():
 
 @feedback_bp.route("", methods=["POST"])
 @login_required
+@limiter.limit("10 per minute")
 def submit_feedback():
     data = request.get_json(silent=True) or {}
     swap_id = data.get("swap_id", "").strip()
@@ -98,11 +99,12 @@ def _award_verified_badge_if_eligible(user_id: str):
 
 
 @feedback_bp.route("/user/<user_id>", methods=["GET"])
+@login_required
 def user_feedback(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
-    feedback_list = Feedback.query.filter_by(rated_id=user.id).order_by(Feedback.created_at.desc()).all()
+    feedback_list = Feedback.query.filter_by(rated_id=user.id).order_by(Feedback.created_at.desc()).limit(100).all()
     avg = Feedback.query.with_entities(db.func.avg(Feedback.rating)).filter_by(rated_id=user.id).scalar()
     count = Feedback.query.filter_by(rated_id=user.id).count()
 

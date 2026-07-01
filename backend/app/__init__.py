@@ -1,5 +1,6 @@
 import os
 import click
+import sentry_sdk
 from flask import Flask, jsonify
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest, InternalServerError
 from dotenv import load_dotenv
@@ -11,13 +12,27 @@ load_dotenv()
 
 
 def create_app():
+    if os.environ.get("SENTRY_DSN"):
+        sentry_sdk.init(
+            dsn=os.environ.get("SENTRY_DSN"),
+            traces_sample_rate=1.0,
+            profiles_sample_rate=1.0,
+        )
+
     app = Flask(__name__)
 
     # ── Config ──────────────────────────────────────────────────────────────
+    is_testing = os.environ.get("FLASK_ENV") == "testing"
+    app.config["TESTING"] = is_testing
     app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["DEBUG"] = os.environ.get("FLASK_ENV") == "development"
+    app.config["RATELIMIT_ENABLED"] = not is_testing
     app.config["WTF_CSRF_SSL_STRICT"] = False
     app.config["WTF_CSRF_EXEMPT_LIST"] = ["/socket.io/*"]
     if os.environ.get("FLASK_ENV") == "production":
@@ -26,11 +41,14 @@ def create_app():
         app.config["SESSION_COOKIE_HTTPONLY"] = True
         app.config["REMEMBER_COOKIE_SECURE"] = True
         app.config["REMEMBER_COOKIE_SAMESITE"] = "None"
+    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB hard limit for uploads
 
     # ── Extensions ──────────────────────────────────────────────────────────
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
+    from .extensions import limiter
+    limiter.init_app(app)
 
     csrf.init_app(app)
 
@@ -54,6 +72,15 @@ def create_app():
     def handle_internal_error(e):
         return {"error": "Internal server error"}, 500
 
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # Prevent stack trace leakage in all environments
+        import traceback
+        import sys
+        print(f"[Unhandled Exception] {e}", file=sys.stderr)
+        traceback.print_exc()
+        return {"error": "An unexpected error occurred"}, 500
+
     init_cloudinary()
 
     login_manager.init_app(app)
@@ -72,6 +99,7 @@ def create_app():
     # ── Login manager ───────────────────────────────────────────────────────
     from .models.user import User
     from .models.admin import Admin
+    from .models.follow import Follow
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -111,11 +139,11 @@ def create_app():
     @app.get("/health")
     def health():
         try:
-            from flask import session as _s
             db.session.execute(db.text("SELECT 1"))
             return {"status": "ok", "db": "connected"}
-        except Exception as e:
-            return {"status": "degraded", "db": str(e)}, 500
+        except Exception:
+            # Never leak connection strings or exception details to the client
+            return {"status": "degraded", "db": "unavailable"}, 500
 
     # ── CLI commands ────────────────────────────────────────────────────────
     _register_cli(app)

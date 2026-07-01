@@ -4,16 +4,17 @@ import { Slot } from '@radix-ui/react-slot'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer',
+  'inline-flex items-center justify-center text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer btn-pill',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-white hover:bg-primary-dark',
-        secondary: 'bg-surface-alt text-text border border-border hover:bg-surface',
-        outline: 'border border-border bg-transparent hover:bg-surface-alt',
+        default: 'btn-glass text-text hover:bg-white/10',
+        primary: 'btn-purple text-white hover:bg-primary-light',
+        secondary: 'btn-white text-gray-900',
+        outline: 'btn-glass',
         ghost: 'hover:bg-surface-alt',
-        danger: 'bg-danger text-white hover:bg-red-600',
-        success: 'bg-success text-white hover:bg-green-600',
+        danger: 'bg-danger/80 text-white hover:bg-danger',
+        success: 'bg-success/80 text-white hover:bg-success',
       },
       size: {
         default: 'h-10 px-4 py-2',

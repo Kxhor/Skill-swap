@@ -14,7 +14,7 @@ def compute_match(user_a_id: str, user_b_id: str) -> dict:
         | ((MatchScore.user_a_id == user_b_id) & (MatchScore.user_b_id == user_a_id))
     ).first()
 
-    if existing and existing.computed_at > datetime.utcnow() - timedelta(days=7):
+    if existing and existing.computed_at.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc) - timedelta(days=7):
         return {"score": existing.score, "reason": existing.reason, "cached": True}
 
     user_a = User.query.get(user_a_id)

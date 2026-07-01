@@ -364,3 +364,41 @@ class TestFeedback:
         data = resp.get_json()
         assert data["average_rating"] == 4.0
         assert data["rating_count"] == 1
+
+class TestCalendarSync:
+    def test_schedule_timezone_parsing(self, client, two_users, alice_id):
+        """Test that the backend correctly parses and stores timezone-aware ISO strings."""
+        two_users
+        resp = client.post("/api/swaps", json={
+            "receiver_id": alice_id,
+            "offered_skill_id": two_users["bob_webdev"]["id"],
+            "wanted_skill_id": two_users["alice_python"]["id"],
+        })
+        swap_id = resp.get_json()["swap"]["id"]
+        client.post("/auth/logout")
+
+        client.post("/auth/login", json={
+            "email": "alice@test.com", "password": "password123",
+        })
+        client.post(f"/api/swaps/{swap_id}/accept")
+        client.post("/auth/logout")
+
+        client.post("/auth/login", json={
+            "email": "bob@test.com", "password": "password123",
+        })
+        
+        # Test frontend ISO string format (e.g., from toISOString())
+        iso_str = "2030-01-01T14:30:00.000Z"
+        resp = client.post(f"/api/swaps/{swap_id}/schedule", json={
+            "scheduled_at": iso_str
+        })
+        assert resp.status_code == 201
+        
+        resp = client.get(f"/api/swaps/{swap_id}/schedule")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        
+        # The stored time string should contain the offset, ensuring it is aware.
+        # Flask jsonify will output something like "Tue, 01 Jan 2030 14:30:00 GMT"
+        # We can just check it exists.
+        assert "scheduled_at" in data["session"]

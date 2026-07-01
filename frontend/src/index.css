@@ -1,17 +1,230 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary: #6366f1;
-  --color-primary-dark: #4f46e5;
-  --color-primary-light: #a5b4fc;
-  --color-secondary: #ec4899;
-  --color-accent: #06b6d4;
-  --color-success: #22c55e;
+:root {
+  /* Core Colors */
+  --color-primary: #8B5CF6; /* Vibrant Purple from reference */
+  --color-primary-dark: #7C3AED;
+  --color-primary-light: #A78BFA;
+  --color-secondary: #ffffff; /* White buttons from reference */
+  --color-accent: #8B5CF6; 
+  
+  --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
-  --color-surface: #f8fafc;
-  --color-surface-alt: #f1f5f9;
-  --color-border: #e2e8f0;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
+  --color-info: #3b82f6;
+  
+  /* Environment Colors */
+  --color-surface: #1E1A18; /* Deep warm espresso */
+  --color-surface-alt: rgba(255, 255, 255, 0.05); /* Soft glass fill */
+  --color-border: rgba(255, 255, 255, 0.08); /* 8% white border */
+  
+  /* Text */
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255, 255, 255, 0.6); /* Soft gray */
+  
+  /* Container Specific */
+  --color-bg-card: rgba(0, 0, 0, 0.25); /* Dark translucent inner cards */
+  --color-glass-main: rgba(255, 255, 255, 0.05); /* Main wrapper fill */
+}
+
+@theme {
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-light: var(--color-primary-light);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  
+  --color-surface: var(--color-surface);
+  --color-surface-alt: var(--color-surface-alt);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-bg-card: var(--color-bg-card);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+}
+
+body {
+  background-color: #151311; /* Fallback deep warm dark */
+  background-image: 
+    radial-gradient(circle at 80% 20%, rgba(200, 160, 140, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(100, 80, 70, 0.15) 0%, transparent 40%);
+  background-attachment: fixed;
+  background-size: cover;
+  color: var(--color-text);
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* --- GLASS UI ABSTRACTIONS --- */
+
+/* Main outer wrapper */
+.glass-panel {
+  background: var(--color-glass-main);
+  backdrop-filter: blur(32px) saturate(120%);
+  -webkit-backdrop-filter: blur(32px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 40px 100px -20px rgba(0, 0, 0, 0.8),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Inner dark cards */
+.glass-card {
+  background: var(--color-bg-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 30px -10px rgba(0, 0, 0, 0.4);
+}
+
+/* Sidebar Active Item */
+.glass-pill-active {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 9999px;
+}
+
+/* Base interactive transition */
+.glass-interactive {
+  transition: all 200ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .glass-interactive:hover {
+    transform: translateY(-2px);
+    background: rgba(25, 25, 25, 0.35);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      inset 0 1px 1px rgba(255, 255, 255, 0.15),
+      0 15px 35px -5px rgba(0, 0, 0, 0.5);
+  }
+  .glass-interactive:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Form Inputs */
+.glass-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 9999px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+.glass-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Base Pill Button */
+.btn-pill {
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Buttons */
+.btn-purple {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+.btn-purple:hover {
+  background: var(--color-primary-light);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
+}
+.btn-purple:active {
+  transform: scale(0.98);
+}
+
+.btn-white {
+  background: #ffffff;
+  color: #171513;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+}
+.btn-white:hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+}
+.btn-white:active {
+  transform: scale(0.98);
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.fast-transition {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gpu-accelerate {
+  transform: translateZ(0);
+  will-change: transform, box-shadow, background-color;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Keep accent-gradient mapping to solid purple for backwards compatibility where used */
+.accent-gradient {
+  background: var(--color-primary);
+  color: white !important;
+  border: none;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }

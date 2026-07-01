@@ -5,9 +5,16 @@ from flask import session as flask_session, request
 from flask_login import current_user
 from app.extensions import socketio, db
 
+# In-memory per-user throttle for typing events.
+# Stores {user_id: last_emit_timestamp}. Since typing events are UI-only
+# and stateless we don't need Redis — in-process is fine for portfolio scale.
+_typing_throttle: dict[str, float] = {}
+_TYPING_INTERVAL_SEC = 2.0  # minimum seconds between typing emits per user
+
 
 def register_socket_events():
     """Register all Socket.IO event handlers."""
+
 
     @socketio.on("connect")
     def handle_connect():
@@ -81,12 +88,25 @@ def register_socket_events():
     @socketio.on("send_message")
     def handle_send_message(data):
         """Persist and broadcast a chat message to the swap room."""
+        from app.utils.validators import sanitize_text
+        
         swap_id = data.get("swap_id")
         content = data.get("content", "").strip()
         user_id = flask_session.get("socket_user_id")
 
         if not swap_id or not content or not user_id:
             return
+
+        # Sanitize and hard cap per message — mirrors HTTP route validation
+        content = sanitize_text(content, max_length=5000)
+        if not content:
+            return
+
+        from app.utils.profanity import contains_profanity
+        if contains_profanity(content):
+            socketio.emit("error", {"message": "This message contains language that goes against our community guidelines."}, room=f"user_{user_id}")
+            return
+
 
         from app.models.swap_request import SwapRequest
         swap = SwapRequest.query.get(swap_id)
@@ -112,11 +132,19 @@ def register_socket_events():
 
     @socketio.on("typing")
     def handle_typing(data):
-        """Relay typing indicator to swap partner."""
+        """Relay typing indicator to swap partner — throttled to 1 emit per 2s per user."""
+        import time
         swap_id = data.get("swap_id")
         user_id = flask_session.get("socket_user_id")
         if not swap_id or not user_id:
             return
+
+        # Throttle: silently drop if this user emitted typing < 2s ago
+        now = time.monotonic()
+        last = _typing_throttle.get(user_id, 0.0)
+        if now - last < _TYPING_INTERVAL_SEC:
+            return
+        _typing_throttle[user_id] = now
 
         from app.models.swap_request import SwapRequest
         swap = SwapRequest.query.get(swap_id)

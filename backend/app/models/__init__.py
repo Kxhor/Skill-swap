@@ -9,6 +9,7 @@ from .admin import Admin
 from .match_score import MatchScore
 from .verified_badge import VerifiedBadge
 from .scheduled_session import ScheduledSession
+from .follow import Follow
 
 __all__ = [
     "User",
@@ -22,4 +23,5 @@ __all__ = [
     "MatchScore",
     "VerifiedBadge",
     "ScheduledSession",
+    "Follow",
 ]

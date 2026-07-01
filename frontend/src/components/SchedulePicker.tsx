@@ -90,14 +90,14 @@ export function SchedulePicker({ swap }: Props) {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="rounded-lg border border-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="glass-input px-2 py-1.5 text-sm"
               required
             />
             <input
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="rounded-lg border border-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="glass-input px-2 py-1.5 text-sm"
               required
             />
             <Button size="sm" type="submit" disabled={!date || !time}>

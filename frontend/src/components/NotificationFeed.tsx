@@ -37,7 +37,7 @@ export function NotificationFeed() {
           <p className="text-xs text-text-muted">No notifications</p>
         )}
         {notifications.map((n, i) => (
-          <div key={`${n.type}-${n.swap_id}-${i}`} className="text-xs text-text-muted bg-surface-alt rounded-lg px-2 py-1.5">
+          <div key={`${n.type}-${n.swap_id}-${i}`} className="text-xs text-text-muted glass-card px-2 py-1.5">
             <p className="text-text">{n.message}</p>
           </div>
         ))}

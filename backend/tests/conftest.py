@@ -19,10 +19,10 @@ def app():
     os.environ["SECRET_KEY"] = "test-secret-key"
     os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     os.environ["CORS_ALLOWED_ORIGINS"] = "http://localhost:5173"
+    os.environ["FLASK_ENV"] = "testing"
 
     from app import create_app
     application = create_app()
-    application.config["TESTING"] = True
 
     with application.app_context():
         _db.create_all()

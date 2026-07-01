@@ -70,13 +70,19 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
       }
     }
 
+    const errorHandler = (data: { message: string }) => {
+      alert(data.message)
+    }
+
     socket.on('new_message', msgHandler)
     socket.on('user_typing', typingHandler)
     socket.on('user_stopped_typing', stoppedHandler)
+    socket.on('error', errorHandler)
     return () => {
       socket.off('new_message', msgHandler)
       socket.off('user_typing', typingHandler)
       socket.off('user_stopped_typing', stoppedHandler)
+      socket.off('error', errorHandler)
     }
   }, [socket, swapId, user?.id])
 
@@ -99,15 +105,47 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
 
   const sendMessage = useCallback(() => {
     const content = text.trim()
-    if (!content || !socket) return
+    if (!content || !socket || !user) return
 
     if (stoppedRef.current) clearTimeout(stoppedRef.current)
     socket.emit('stopped_typing', { swap_id: swapId })
     socket.emit('send_message', { swap_id: swapId, content })
     setText('')
-  }, [text, socket, swapId])
+    
+    // Optimistic UI update
+    const tempId = `temp-${Date.now()}`
+    setLiveMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        swap_id: swapId,
+        sender_id: user.id,
+        content,
+        type: 'user',
+        created_at: new Date().toISOString()
+      }
+    ])
+  }, [text, socket, swapId, user])
 
-  const messages: Message[] = [...(initialData || []), ...liveMessages]
+  const allMessages = [...(initialData || []), ...liveMessages]
+  
+  // To handle optimistic UI, we don't want duplicates if the real message arrives fast.
+  // We use a Map to keep unique messages by ID, but since temp IDs differ from real UUIDs,
+  // we filter out temp messages that have a matching content with a real message from the same sender
+  const realMessages = allMessages.filter(m => !m.id.startsWith('temp-'))
+  const tempMessages = allMessages.filter(m => m.id.startsWith('temp-'))
+  
+  const finalMessages = [...realMessages]
+  for (const t of tempMessages) {
+    if (!realMessages.some(r => r.content === t.content && r.sender_id === t.sender_id)) {
+      finalMessages.push(t)
+    }
+  }
+
+  const uniqueMessagesMap = new Map(finalMessages.filter(m => m.id).map(m => [m.id, m]))
+  const messages: Message[] = Array.from(uniqueMessagesMap.values()).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
 
   return (
     <div className="flex flex-col h-full">
@@ -140,7 +178,7 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
                 className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
                   mine
                     ? 'bg-primary text-white rounded-tr-sm'
-                    : 'bg-surface-alt text-text rounded-tl-sm'
+                    : 'bg-white/10 border border-white/10 text-text rounded-tl-sm'
                 }`}
               >
                 <p className="break-words">{msg.content}</p>
@@ -171,9 +209,9 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Type a message..."
             maxLength={500}
-            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="flex-1 glass-input px-3 py-2 text-sm"
           />
-          <Button type="submit" size="icon" disabled={!text.trim() || !socket}>
+          <Button type="submit" size="icon" variant="primary" disabled={!text.trim() || !socket}>
             <Send className="w-4 h-4" />
           </Button>
         </form>

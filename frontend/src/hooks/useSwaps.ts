@@ -75,3 +75,25 @@ export function useSendMessage(swapId: string) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['messages', swapId] }) },
   })
 }
+
+export function useAddSkill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { skill_name: string; type: 'offered' | 'wanted'; proficiency: string }) =>
+      api.post('/api/users/skills', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] })
+    },
+  })
+}
+
+export function useDeleteSkill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/api/users/skills/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] })
+    },
+  })
+}
+

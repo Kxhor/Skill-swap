@@ -51,7 +51,7 @@ export function SkillHeatmap() {
             if (!active || !payload?.length) return null
             const d = payload[0].payload
             return (
-              <div className="bg-white border border-border rounded-lg shadow-sm px-3 py-2 text-xs">
+              <div className="glass-panel rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.2)] px-3 py-2 text-xs">
                 <p className="font-medium text-text">{d.name}</p>
                 <p className="text-text-muted">{d.count} people offer this skill</p>
               </div>

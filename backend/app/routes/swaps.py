@@ -2,13 +2,14 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm import selectinload
-from app.extensions import db, socketio
+from app.extensions import db, socketio, limiter
 from app.models.user import User
 from app.models.user_skill import UserSkill
 from app.models.swap_request import SwapRequest
 from app.models.chat import ChatMessage
 from app.models.scheduled_session import ScheduledSession
 from app.utils.validators import sanitize_text
+from app.utils.profanity import contains_profanity
 
 swaps_bp = Blueprint("swaps", __name__)
 
@@ -52,8 +53,24 @@ def list_swaps():
     query = query.order_by(SwapRequest.updated_at.desc())
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
+    swap_ids = [s.id for s in pagination.items]
+    unread_counts = dict(
+        db.session.query(ChatMessage.swap_id, db.func.count(ChatMessage.id))
+        .filter(ChatMessage.swap_id.in_(swap_ids))
+        .filter(ChatMessage.is_read == False)
+        .filter(ChatMessage.sender_id != current_user.id)
+        .group_by(ChatMessage.swap_id)
+        .all()
+    ) if swap_ids else {}
+
+    swaps_data = []
+    for s in pagination.items:
+        s_dict = s.to_dict()
+        s_dict["unread_count"] = unread_counts.get(s.id, 0)
+        swaps_data.append(s_dict)
+
     return jsonify({
-        "swaps": [s.to_dict() for s in pagination.items],
+        "swaps": swaps_data,
         "page": pagination.page,
         "pages": pagination.pages,
         "total": pagination.total,
@@ -62,6 +79,7 @@ def list_swaps():
 
 @swaps_bp.route("", methods=["POST"])
 @login_required
+@limiter.limit("10 per minute")  # Prevent swap-request spam
 def create_swap():
     data = request.get_json(silent=True) or {}
     receiver_id = data.get("receiver_id", "").strip()
@@ -107,27 +125,67 @@ def create_swap():
     db.session.add(swap)
     db.session.commit()
 
-    socketio.emit("new_swap_request", {
-        "swap": swap.to_dict(),
-        "message": f"New swap request from {current_user.name}",
-    }, room=f"user_{receiver_id}")
-    socketio.emit("notification", {
-        "type": "new_swap_request",
-        "swap_id": swap.id,
-        "message": f"New swap request from {current_user.name}",
-    }, room=f"user_{receiver_id}")
-    socketio.emit("swap_status_changed", {
-        "swap_id": swap.id,
-        "status": "pending",
-        "previous_status": None,
-    }, room=f"user_{receiver_id}")
-    socketio.emit("swap_status_changed", {
-        "swap_id": swap.id,
-        "status": "pending",
-        "previous_status": None,
-    }, room=f"user_{current_user.id}")
+    swap_dict = swap.to_dict()
+    current_name = current_user.name
+    current_user_id = current_user.id
+    swap_id = swap.id
+
+    def _emit_events():
+        socketio.emit("new_swap_request", {
+            "swap": swap_dict,
+            "message": f"New swap request from {current_name}",
+        }, room=f"user_{receiver_id}")
+        socketio.emit("notification", {
+            "type": "new_swap_request",
+            "swap_id": swap_id,
+            "message": f"New swap request from {current_name}",
+        }, room=f"user_{receiver_id}")
+        socketio.emit("swap_status_changed", {
+            "swap_id": swap_id,
+            "status": "pending",
+            "previous_status": None,
+        }, room=f"user_{receiver_id}")
+        socketio.emit("swap_status_changed", {
+            "swap_id": swap_id,
+            "status": "pending",
+            "previous_status": None,
+        }, room=f"user_{current_user_id}")
+
+    socketio.start_background_task(_emit_events)
 
     return jsonify({"message": "Swap request sent", "swap": swap.to_dict()}), 201
+
+
+@swaps_bp.route("/unread-count", methods=["GET"])
+@login_required
+def get_unread_chats_count():
+    # Count distinct swaps where we have unread messages from the other user
+    unread_chats = db.session.query(ChatMessage.swap_id).filter(
+        ChatMessage.sender_id != current_user.id,
+        ChatMessage.is_read == False
+    ).join(SwapRequest, SwapRequest.id == ChatMessage.swap_id).filter(
+        (SwapRequest.sender_id == current_user.id) | (SwapRequest.receiver_id == current_user.id)
+    ).distinct().count()
+    
+    return jsonify({"unread_chats_count": unread_chats}), 200
+
+
+@swaps_bp.route("/<swap_id>/read", methods=["POST"])
+@login_required
+def mark_swap_read(swap_id):
+    swap = SwapRequest.query.get(swap_id)
+    if not swap:
+        return jsonify({"error": "Swap not found"}), 404
+    if swap.sender_id != current_user.id and swap.receiver_id != current_user.id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    # Mark all messages sent by the OTHER user as read
+    ChatMessage.query.filter_by(swap_id=swap_id, is_read=False).filter(
+        ChatMessage.sender_id != current_user.id
+    ).update({"is_read": True})
+    db.session.commit()
+
+    return jsonify({"message": "Messages marked as read"}), 200
 
 
 @swaps_bp.route("/<swap_id>", methods=["GET"])
@@ -163,25 +221,36 @@ def accept_swap(swap_id):
     db.session.add(system_msg)
     db.session.commit()
 
-    accepted_data = {
-        "swap": swap.to_dict(),
-        "message": f"Your swap request was accepted by {current_user.name}",
-    }
-    socketio.emit("swap_accepted", accepted_data, room=f"user_{swap.sender_id}")
-    socketio.emit("swap_accepted", accepted_data, room=f"user_{swap.receiver_id}")
-    socketio.emit("notification", {
-        "type": "swap_accepted",
-        "swap_id": swap.id,
-        "message": f"Your swap request was accepted by {current_user.name}",
-    }, room=f"user_{swap.sender_id}")
-    socketio.emit("new_message", system_msg.to_dict(), room=f"user_{swap.sender_id}")
-    socketio.emit("new_message", system_msg.to_dict(), room=f"user_{swap.receiver_id}")
-    for uid in (swap.sender_id, swap.receiver_id):
-        socketio.emit("swap_status_changed", {
-            "swap_id": swap.id,
-            "status": swap.status,
-            "previous_status": "pending",
-        }, room=f"user_{uid}")
+    swap_dict = swap.to_dict()
+    current_name = current_user.name
+    swap_id = swap.id
+    sender_id = swap.sender_id
+    receiver_id = swap.receiver_id
+    status = swap.status
+    sys_msg_dict = system_msg.to_dict()
+
+    def _emit_events():
+        accepted_data = {
+            "swap": swap_dict,
+            "message": f"Your swap request was accepted by {current_name}",
+        }
+        socketio.emit("swap_accepted", accepted_data, room=f"user_{sender_id}")
+        socketio.emit("swap_accepted", accepted_data, room=f"user_{receiver_id}")
+        socketio.emit("notification", {
+            "type": "swap_accepted",
+            "swap_id": swap_id,
+            "message": f"Your swap request was accepted by {current_name}",
+        }, room=f"user_{sender_id}")
+        socketio.emit("new_message", sys_msg_dict, room=f"user_{sender_id}")
+        socketio.emit("new_message", sys_msg_dict, room=f"user_{receiver_id}")
+        for uid in (sender_id, receiver_id):
+            socketio.emit("swap_status_changed", {
+                "swap_id": swap_id,
+                "status": status,
+                "previous_status": "pending",
+            }, room=f"user_{uid}")
+
+    socketio.start_background_task(_emit_events)
 
     return jsonify({"message": "Swap accepted", "swap": swap.to_dict()}), 200
 
@@ -200,21 +269,31 @@ def reject_swap(swap_id):
     swap.status = "rejected"
     db.session.commit()
 
-    socketio.emit("swap_rejected", {
-        "swap": swap.to_dict(),
-        "message": f"Your swap request was rejected by {current_user.name}",
-    }, room=f"user_{swap.sender_id}")
-    socketio.emit("notification", {
-        "type": "swap_rejected",
-        "swap_id": swap.id,
-        "message": f"Your swap request was rejected by {current_user.name}",
-    }, room=f"user_{swap.sender_id}")
-    for uid in (swap.sender_id, swap.receiver_id):
-        socketio.emit("swap_status_changed", {
-            "swap_id": swap.id,
-            "status": swap.status,
-            "previous_status": "pending",
-        }, room=f"user_{uid}")
+    swap_dict = swap.to_dict()
+    current_name = current_user.name
+    swap_id = swap.id
+    sender_id = swap.sender_id
+    receiver_id = swap.receiver_id
+    status = swap.status
+
+    def _emit_events():
+        socketio.emit("swap_rejected", {
+            "swap": swap_dict,
+            "message": f"Your swap request was rejected by {current_name}",
+        }, room=f"user_{sender_id}")
+        socketio.emit("notification", {
+            "type": "swap_rejected",
+            "swap_id": swap_id,
+            "message": f"Your swap request was rejected by {current_name}",
+        }, room=f"user_{sender_id}")
+        for uid in (sender_id, receiver_id):
+            socketio.emit("swap_status_changed", {
+                "swap_id": swap_id,
+                "status": status,
+                "previous_status": "pending",
+            }, room=f"user_{uid}")
+
+    socketio.start_background_task(_emit_events)
 
     return jsonify({"message": "Swap rejected", "swap": swap.to_dict()}), 200
 
@@ -288,12 +367,24 @@ def get_messages(swap_id):
     if swap.status != "accepted" and swap.status != "completed":
         return jsonify({"error": "Chat is not available for this swap status"}), 400
 
-    messages = ChatMessage.query.filter_by(swap_id=swap_id).order_by(ChatMessage.created_at).limit(100).all()
-    return jsonify({"messages": [m.to_dict() for m in messages]}), 200
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    pagination = ChatMessage.query.filter_by(swap_id=swap_id).order_by(ChatMessage.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    messages = pagination.items
+    messages.reverse()  # Return chronological order for UI
+
+    return jsonify({
+        "messages": [m.to_dict() for m in messages],
+        "page": pagination.page,
+        "pages": pagination.pages,
+        "total": pagination.total
+    }), 200
 
 
 @swaps_bp.route("/<swap_id>/messages", methods=["POST"])
 @login_required
+@limiter.limit("30 per minute")  # Prevent message spam (generous but bounded)
 def send_message(swap_id):
     swap = SwapRequest.query.get(swap_id)
     if not swap:
@@ -307,8 +398,11 @@ def send_message(swap_id):
     content = data.get("content", "").strip()
     if not content:
         return jsonify({"error": "Message cannot be empty"}), 422
-    if len(content) > 5000:
-        return jsonify({"error": "Message too long (max 5000 characters)"}), 422
+    if len(content) > 2000:
+        return jsonify({"error": "Message too long (max 2000 characters)"}), 422
+        
+    if contains_profanity(content):
+        return jsonify({"error": "This message contains language that goes against our community guidelines."}), 400
 
     content = sanitize_text(content)
 
@@ -322,7 +416,9 @@ def send_message(swap_id):
     db.session.commit()
 
     message_data = message.to_dict()
-    socketio.emit("new_message", message_data, room=f"swap_{swap_id}")
+    socketio.emit("new_message", message_data, room=f"user_{swap.sender_id}")
+    if swap.sender_id != swap.receiver_id:
+        socketio.emit("new_message", message_data, room=f"user_{swap.receiver_id}")
 
     return jsonify({"message": message_data}), 201
 
@@ -365,7 +461,10 @@ def propose_session(swap_id):
         return jsonify({"error": "scheduled_at is required"}), 422
 
     try:
+        scheduled_at_str = scheduled_at_str.replace("Z", "+00:00")
         scheduled_at = datetime.fromisoformat(scheduled_at_str)
+        if scheduled_at.tzinfo is None:
+            scheduled_at = scheduled_at.replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid datetime format (use ISO 8601)"}), 422
 

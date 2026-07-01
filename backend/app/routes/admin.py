@@ -40,6 +40,9 @@ def stats():
     new_users_week = User.query.filter(User.created_at >= week_ago).count()
     new_swaps_week = SwapRequest.query.filter(SwapRequest.created_at >= week_ago).count()
 
+    avg_rating_row = db.session.query(db.func.avg(Feedback.rating)).first()
+    average_rating = round(float(avg_rating_row[0]), 2) if avg_rating_row and avg_rating_row[0] is not None else 0.0
+
     return jsonify({
         "total_users": total_users,
         "active_users": active_users,
@@ -54,6 +57,7 @@ def stats():
         "approved_skills": approved_skills,
         "new_users_week": new_users_week,
         "new_swaps_week": new_swaps_week,
+        "average_rating": average_rating,
     }), 200
 
 

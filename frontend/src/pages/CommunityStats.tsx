@@ -15,14 +15,14 @@ export default function CommunityStats() {
   })
 
   if (isError) return (
-    <div className="flex h-screen bg-surface">
+    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
       <Sidebar />
       <main className="flex-1 p-8"><p className="text-text-muted text-center py-8">Failed to load data</p></main>
     </div>
   )
 
   if (isLoading) return (
-    <div className="flex h-screen bg-surface">
+    <div className="flex h-screen p-4 md:p-6 gap-6 ">
       <Sidebar />
       <main className="flex-1 p-8"><p className="text-text-muted">Loading...</p></main>
     </div>
@@ -47,26 +47,26 @@ export default function CommunityStats() {
   ]
 
   return (
-    <div className="flex h-screen bg-surface">
+    <div className="flex h-screen p-4 md:p-6 gap-6">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-8 glass-panel rounded-3xl">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold text-text mb-6">Community Stats</h1>
 
           <div className="grid grid-cols-4 gap-4 mb-8">
             {cards.map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="bg-white rounded-xl border border-border p-5">
-                <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center mb-3`}>
-                  <Icon className="w-5 h-5" />
+              <div key={label} className="glass-card rounded-xl p-5 glass-interactive">
+                <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center mb-3 bg-white/10`}>
+                  <Icon className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-2xl font-bold text-text">{value}</p>
-                <p className="text-sm text-text-muted">{label}</p>
+                <p className="text-4xl font-bold text-white tracking-tight">{value}</p>
+                <p className="text-sm text-text-muted font-medium uppercase tracking-wider mt-1">{label}</p>
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl border border-border p-5">
+            <div className="glass-card rounded-xl p-5">
               <h2 className="font-semibold text-text mb-4">Top Skills</h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={topSkills} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -79,7 +79,7 @@ export default function CommunityStats() {
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-xl border border-border p-5">
+            <div className="glass-panel rounded-xl p-5 fast-transition gpu-accelerate hover:shadow-[0_8px_32px_rgba(139,92,246,0.15)]">
               <h2 className="font-semibold text-text mb-4">Swap Status Distribution</h2>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>

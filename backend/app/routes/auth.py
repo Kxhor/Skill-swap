@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import generate_csrf
-from app.extensions import db, bcrypt
+from app.extensions import db, bcrypt, limiter
 from app.models.user import User
 from app.models.admin import Admin
 from app.utils.validators import validate_email, validate_password, validate_name, validate_location
@@ -26,6 +26,7 @@ def get_csrf_token():
 
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
 def register():
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
@@ -54,11 +55,30 @@ def register():
     if errors:
         return jsonify({"error": "Validation failed", "details": errors}), 422
 
+    import random
+    import re
+    
+    # Generate unique swap_id
+    while True:
+        s_id = f"SWAP-{random.randint(100000, 999999)}"
+        if not User.query.filter_by(swap_id=s_id).first():
+            break
+            
+    # Generate unique swap_username
+    base_username = re.sub(r'[^a-z0-9_]', '', name.lower().replace(" ", "_"))
+    s_username = base_username
+    while True:
+        if not User.query.filter_by(swap_username=s_username).first():
+            break
+        s_username = f"{base_username}_{random.randint(100, 999)}"
+
     user = User(
         name=name,
         email=email,
         password_hash=bcrypt.generate_password_hash(password).decode("utf-8"),
         location=location or None,
+        swap_id=s_id,
+        swap_username=s_username,
     )
     db.session.add(user)
     db.session.commit()
@@ -68,6 +88,7 @@ def register():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
@@ -88,6 +109,7 @@ def login():
 
 
 @auth_bp.route("/admin/login", methods=["POST"])
+@limiter.limit("5 per minute")
 def admin_login():
     data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
