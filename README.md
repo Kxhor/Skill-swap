@@ -70,11 +70,13 @@ The relational schema ensures data integrity through strict foreign key constrai
 - `chat_messages`: Stores timestamps and content for messages linked to an accepted swap.
 
 ## 8. Screenshots
-> **Note:** Add screenshots here before publishing.
-- `![Dashboard](docs/screenshots/dashboard.png)`
-- `![User Profile & Match Score](docs/screenshots/profile.png)`
-- `![Real-Time Chat](docs/screenshots/chat.png)`
-- `![Mobile View](docs/screenshots/mobile.png)`
+![Dashboard](docs/screenshots/dashboard.png)
+
+![User Profile & Match Score](docs/screenshots/profile.png)
+
+![Swap Requests](docs/screenshots/swap_requests.png)
+
+![Real-Time Chat](docs/screenshots/messages.png)
 
 ## 9. Demo
 *(Link your demo video or deployed application URL here)*

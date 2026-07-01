@@ -18,11 +18,13 @@ export function SkillSection({
   const [isAdding, setIsAdding] = useState(false)
   const [newSkill, setNewSkill] = useState('')
   const [proficiency, setProficiency] = useState('beginner')
+  const [error, setError] = useState('')
   const addSkill = useAddSkill()
   const deleteSkill = useDeleteSkill()
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     if (!newSkill.trim()) return
     addSkill.mutate(
       { skill_name: newSkill, type, proficiency },
@@ -31,7 +33,11 @@ export function SkillSection({
           setNewSkill('')
           setProficiency('beginner')
           setIsAdding(false)
+          setError('')
         },
+        onError: (err: any) => {
+          setError(err.response?.data?.error || err.response?.data?.details?.[0] || 'Failed to add skill')
+        }
       }
     )
   }
@@ -48,37 +54,40 @@ export function SkillSection({
       </div>
 
       {isOwn && isAdding && (
-        <form onSubmit={handleAdd} className="mb-4 p-4 glass-card flex gap-3 items-start">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="e.g. React, Python, UI Design"
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              list="skill-options"
-              className="w-full glass-input px-3 py-2 text-sm"
-              required
-            />
-            <datalist id="skill-options">
-              {SKILL_OPTIONS.map((opt) => (
-                <option key={opt} value={opt} />
-              ))}
-            </datalist>
-          </div>
-          <select
-            value={proficiency}
-            onChange={(e) => setProficiency(e.target.value)}
-            className="w-32 glass-input px-3 py-2 text-sm"
-          >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="expert">Expert</option>
-          </select>
-          <Button type="submit" disabled={addSkill.isPending}>Add</Button>
-          <Button type="button" variant="outline" onClick={() => setIsAdding(false)}>
-            Cancel
-          </Button>
-        </form>
+        <div className="mb-4 p-4 glass-card">
+          <form onSubmit={handleAdd} className="flex gap-3 items-start">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="e.g. React, Python, UI Design"
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                list="skill-options"
+                className="w-full glass-input px-3 py-2 text-sm"
+                required
+              />
+              <datalist id="skill-options">
+                {SKILL_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt} />
+                ))}
+              </datalist>
+            </div>
+            <select
+              value={proficiency}
+              onChange={(e) => setProficiency(e.target.value)}
+              className="w-32 glass-input px-3 py-2 text-sm"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="expert">Expert</option>
+            </select>
+            <Button type="submit" disabled={addSkill.isPending}>Add</Button>
+            <Button type="button" variant="outline" onClick={() => { setIsAdding(false); setError(''); }}>
+              Cancel
+            </Button>
+          </form>
+          {error && <p className="text-danger text-xs mt-2">{error}</p>}
+        </div>
       )}
 
       {skills.length === 0 ? (

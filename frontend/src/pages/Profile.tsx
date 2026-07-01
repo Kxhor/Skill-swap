@@ -127,8 +127,8 @@ export default function Profile() {
         <div className="max-w-4xl mx-auto">
           {/* Profile Card */}
           <div className="glass-card rounded-2xl p-8 mb-8 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-32 bg-primary opacity-10"></div>
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <div className="absolute top-0 left-0 w-full h-32 bg-primary opacity-10 pointer-events-none"></div>
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
               <div className="flex flex-col items-center gap-3">
                 {p?.photo_url ? (
                   <div className="relative select-none" onContextMenu={(e) => e.preventDefault()}>
@@ -184,7 +184,12 @@ export default function Profile() {
                       >
                         {p?.is_following === 'accepted' ? 'Unfollow' : p?.is_following === 'pending' ? 'Requested' : 'Follow'}
                       </Button>
-                      <Button onClick={() => setShowSwapModal(true)} variant="primary">
+                      <Button 
+                        onClick={() => {
+                          setShowSwapModal(true);
+                        }} 
+                        variant="primary"
+                      >
                         <ArrowLeftRight className="w-4 h-4 mr-2" /> Request Swap
                       </Button>
                     </div>

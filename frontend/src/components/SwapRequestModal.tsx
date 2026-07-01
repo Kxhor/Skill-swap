@@ -15,6 +15,8 @@ export function SwapRequestModal({ targetUser, onClose }: { targetUser: any, onC
     queryFn: () => api.get('/api/users/profile').then(r => r.data.user)
   })
 
+  console.log("SwapRequestModal Rendered!", { targetUser, myProfile });
+
   const [offeredSkillId, setOfferedSkillId] = useState('')
   const [wantedSkillId, setWantedSkillId] = useState('')
   const [error, setError] = useState('')
@@ -35,6 +37,7 @@ export function SwapRequestModal({ targetUser, onClose }: { targetUser: any, onC
       wanted_skill_id: wantedSkillId
     }, {
       onSuccess: () => {
+        alert('Swap request sent successfully!')
         onClose()
       },
       onError: (err: any) => {
