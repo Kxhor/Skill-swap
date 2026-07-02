@@ -10,6 +10,8 @@ venv/
 env/
 
 .env
+render.env
+*.env
 *.sqlite3
 
 migrations/versions/
