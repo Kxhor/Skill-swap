@@ -12,6 +12,8 @@ env/
 .env
 render.env
 *.env
+*.db
+instance/
 *.sqlite3
 
 migrations/versions/

@@ -35,7 +35,8 @@ def upload_photo(file, public_id=None):
         result = cloudinary.uploader.upload(file, **upload_options)
         return result["secure_url"], None
     except Exception as e:
-        return None, f"Upload failed: {str(e)}"
+        print(f"[cloudinary_upload] Upload failed: {e}")
+        return None, "Upload failed. Please try again."
 
 
 def delete_photo(public_id):
