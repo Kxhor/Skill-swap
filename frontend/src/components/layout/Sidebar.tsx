@@ -116,7 +116,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border/10">
+      <div className="p-4 border-t border-border/10 relative z-50">
         <div className="relative" ref={dropdownRef}>
           {isDropdownOpen && (
             <div className="absolute bottom-full left-0 mb-2 w-full glass-card overflow-hidden z-50 gpu-accelerate shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
