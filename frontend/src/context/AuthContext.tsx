@@ -47,12 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    try {
-      await api.post('/auth/logout')
-    } catch {
-      // network error or session already invalid — clear client state
-    }
     setUser(null)
+    api.post('/auth/logout').catch(() => {})
   }
 
   return (
