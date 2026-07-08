@@ -20,4 +20,4 @@ gevent-websocket==0.10.1
 gevent==24.2.1
 bleach==6.1.0
 Flask-Limiter==3.8.0
-sentry-sdk==2.0.0
+sentry-sdk==2.64.0
