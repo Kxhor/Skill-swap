@@ -5,8 +5,10 @@ import { useAuth } from '@/context/AuthContext'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { X, ArrowLeftRight } from 'lucide-react'
+import { useToast } from '@/components/ui/toaster'
 
 export function SwapRequestModal({ targetUser, onClose }: { targetUser: any, onClose: () => void }) {
+  const { toast } = useToast()
   const { user: me } = useAuth()
   const createSwap = useCreateSwap()
   
@@ -15,8 +17,7 @@ export function SwapRequestModal({ targetUser, onClose }: { targetUser: any, onC
     queryFn: () => api.get('/api/users/profile').then(r => r.data.user)
   })
 
-  console.log("SwapRequestModal Rendered!", { targetUser, myProfile });
-
+  
   const [offeredSkillId, setOfferedSkillId] = useState('')
   const [wantedSkillId, setWantedSkillId] = useState('')
   const [error, setError] = useState('')
@@ -37,7 +38,7 @@ export function SwapRequestModal({ targetUser, onClose }: { targetUser: any, onC
       wanted_skill_id: wantedSkillId
     }, {
       onSuccess: () => {
-        alert('Swap request sent successfully!')
+        toast({ title: 'Success', description: 'Swap request sent successfully!', variant: 'success' })
         onClose()
       },
       onError: (err: any) => {

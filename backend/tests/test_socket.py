@@ -1,10 +1,29 @@
 """Tests for Socket.IO connection handlers and event routing."""
 
 
+import pytest
+
+
 def _as(flask_client, email, password="password123"):
     """Switch the shared test client to act as the given user."""
     resp = flask_client.post("/auth/login", json={"email": email, "password": password})
     assert resp.status_code in (200, 201), f"Login as {email} failed: {resp.get_json()}"
+
+
+@pytest.fixture
+def accepted_swap(client, alice_bob_swap, socket_alice, socket_bob):
+    """An accepted swap between Alice and Bob for chat/typing tests.
+
+    Accepts alice_bob_swap via Bob, drains socket events, and switches client back to Alice.
+    """
+    _as(client, "bob@example.com")
+    resp = client.post(f"/api/swaps/{alice_bob_swap}/accept", json={})
+    assert resp.status_code == 200
+    # Drain events (swap_accepted, new_message, notifications) from accept
+    socket_alice.get_received("/")
+    socket_bob.get_received("/")
+    _as(client, "alice@example.com")
+    return alice_bob_swap
 
 
 class TestSocketConnection:
@@ -24,6 +43,30 @@ class TestSocketConnection:
         """Disconnecting does not raise."""
         socket_alice.disconnect()
         assert not socket_alice.is_connected()
+
+    def test_disconnect_cleans_up_rate_limit_and_throttle(self, socket_alice, socket_bob, accepted_swap):
+        """Disconnecting clears user from _message_rate_limit and _typing_throttle."""
+        from app.socket_events import _message_rate_limit, _typing_throttle
+
+        alice_id = socket_alice.user_id
+        swap_id = accepted_swap
+
+        socket_alice.emit("send_message", {
+            "swap_id": swap_id,
+            "content": "Message to populate rate limit",
+        })
+        socket_alice.emit("typing", {
+            "swap_id": swap_id,
+            "user_id": alice_id,
+        })
+
+        assert alice_id in _message_rate_limit
+        assert alice_id in _typing_throttle
+
+        socket_alice.disconnect()
+
+        assert alice_id not in _message_rate_limit
+        assert alice_id not in _typing_throttle
 
     def test_join_user_room_auto(self, socket_alice):
         """Client automatically joins their user_{id} room on connect."""
@@ -163,9 +206,9 @@ class TestSocketSwapRooms:
 class TestSocketChatEvents:
     """6b: Real-time chat via socket."""
 
-    def test_send_message_via_socket(self, socket_alice, socket_bob, alice_bob_swap):
+    def test_send_message_via_socket(self, socket_alice, socket_bob, accepted_swap):
         """Message sent via socket is received by both parties."""
-        swap_id = alice_bob_swap
+        swap_id = accepted_swap
         socket_alice.emit("send_message", {
             "swap_id": swap_id,
             "content": "Hello from Alice!",
@@ -182,12 +225,12 @@ class TestSocketChatEvents:
         assert len(bob_msgs) >= 1
         assert bob_msgs[0]["args"][0]["content"] == "Hello from Alice!"
 
-    def test_send_message_persists(self, socket_alice, socket_bob, alice_bob_swap):
+    def test_send_message_persists(self, socket_alice, socket_bob, accepted_swap):
         """Message sent via socket is saved to database."""
         from app.models.chat import ChatMessage
         from app.extensions import db
 
-        swap_id = alice_bob_swap
+        swap_id = accepted_swap
         socket_alice.emit("send_message", {
             "swap_id": swap_id,
             "content": "Persist this!",
@@ -200,6 +243,52 @@ class TestSocketChatEvents:
             ).first()
             assert msg is not None
             assert msg.sender_id == socket_alice.user_id
+
+    def test_send_message_on_pending_swap_rejected(self, socket_alice, socket_bob, alice_bob_swap):
+        """Sending a message on a pending swap does not persist and emits error event."""
+        from app.models.chat import ChatMessage
+
+        swap_id = alice_bob_swap
+        socket_alice.emit("send_message", {
+            "swap_id": swap_id,
+            "content": "Trying to chat before accept!",
+        })
+
+        alice_received = socket_alice.get_received("/")
+        errors = [e for e in alice_received if e["name"] == "error"]
+        assert len(errors) == 1
+        assert errors[0]["args"][0]["message"] == "Chat is only available for accepted swaps"
+
+        with socket_alice.app.app_context():
+            msgs = ChatMessage.query.filter_by(swap_id=swap_id).all()
+            assert len(msgs) == 0
+
+        bob_received = socket_bob.get_received("/")
+        assert not any(e["name"] == "new_message" for e in bob_received)
+
+    def test_send_message_on_rejected_swap_rejected(self, socket_alice, socket_bob, alice_bob_swap, client):
+        """Sending a message on a rejected swap does not persist and emits error event."""
+        from app.models.chat import ChatMessage
+
+        swap_id = alice_bob_swap
+        _as(client, "bob@example.com")
+        client.post(f"/api/swaps/{swap_id}/reject", json={})
+        socket_alice.get_received("/")
+        socket_bob.get_received("/")
+
+        socket_alice.emit("send_message", {
+            "swap_id": swap_id,
+            "content": "Trying to chat after rejection!",
+        })
+
+        alice_received = socket_alice.get_received("/")
+        errors = [e for e in alice_received if e["name"] == "error"]
+        assert len(errors) == 1
+        assert errors[0]["args"][0]["message"] == "Chat is only available for accepted swaps"
+
+        with socket_alice.app.app_context():
+            msgs = ChatMessage.query.filter_by(swap_id=swap_id).all()
+            assert len(msgs) == 0
 
     def test_third_user_cannot_send_message(self, socket_alice, socket_bob, alice_bob_swap, client):
         """Third user (not swap participant) cannot send message on others' swap."""
@@ -235,6 +324,46 @@ class TestSocketChatEvents:
         bob_received = socket_bob.get_received("/")
         assert not any(e["name"] == "new_message" for e in alice_received)
         assert not any(e["name"] == "new_message" for e in bob_received)
+
+    def test_message_over_2000_chars_rejected(self, socket_alice, socket_bob, accepted_swap):
+        """Message exceeding 2000 characters is rejected with an error event."""
+        swap_id = accepted_swap
+        long_content = "A" * 2001
+        socket_alice.emit("send_message", {
+            "swap_id": swap_id,
+            "content": long_content,
+        })
+        alice_received = socket_alice.get_received("/")
+        errors = [e for e in alice_received if e["name"] == "error"]
+        assert len(errors) == 1
+        assert "2000" in errors[0]["args"][0]["message"]
+
+    def test_message_rate_limiting(self, socket_alice, socket_bob, accepted_swap):
+        """User cannot exceed 30 messages per minute on socket."""
+        from app.socket_events import _message_rate_limit
+        _message_rate_limit.clear()
+        swap_id = accepted_swap
+
+        # Send 30 messages - all should succeed without error
+        for i in range(30):
+            socket_alice.emit("send_message", {
+                "swap_id": swap_id,
+                "content": f"Message {i}",
+            })
+
+        alice_received = socket_alice.get_received("/")
+        errors = [e for e in alice_received if e["name"] == "error"]
+        assert len(errors) == 0
+
+        # 31st message should be rejected with rate limit error
+        socket_alice.emit("send_message", {
+            "swap_id": swap_id,
+            "content": "Message 31 - too fast!",
+        })
+        alice_received = socket_alice.get_received("/")
+        errors = [e for e in alice_received if e["name"] == "error"]
+        assert len(errors) == 1
+        assert "too fast" in errors[0]["args"][0]["message"].lower()
 
     def test_system_message_on_accept(self, socket_alice, socket_bob, alice_bob_swap, client):
         """System message created and emitted when swap is accepted."""
@@ -360,9 +489,9 @@ class TestSocketNotifications:
 class TestSocketTyping:
     """6e: Typing indicators."""
 
-    def test_typing_relayed(self, socket_alice, socket_bob, alice_bob_swap):
+    def test_typing_relayed(self, socket_alice, socket_bob, accepted_swap):
         """Typing event routed to swap partner."""
-        swap_id = alice_bob_swap
+        swap_id = accepted_swap
         socket_alice.emit("typing", {"swap_id": swap_id, "user_id": socket_alice.user_id})
 
         bob_received = socket_bob.get_received("/")
@@ -372,9 +501,9 @@ class TestSocketTyping:
         ]
         assert len(events) >= 1
 
-    def test_stopped_typing_relayed(self, socket_alice, socket_bob, alice_bob_swap):
+    def test_stopped_typing_relayed(self, socket_alice, socket_bob, accepted_swap):
         """Stopped typing event routed to swap partner."""
-        swap_id = alice_bob_swap
+        swap_id = accepted_swap
         socket_alice.emit("stopped_typing", {"swap_id": swap_id, "user_id": socket_alice.user_id})
 
         bob_received = socket_bob.get_received("/")
@@ -383,3 +512,15 @@ class TestSocketTyping:
             if e["name"] == "user_stopped_typing" and e["args"][0]["user_id"] == socket_alice.user_id
         ]
         assert len(events) >= 1
+
+    def test_typing_on_pending_swap_ignored(self, socket_alice, socket_bob, alice_bob_swap):
+        """Typing events on a pending swap are silently ignored without relay."""
+        swap_id = alice_bob_swap
+        socket_alice.emit("typing", {"swap_id": swap_id, "user_id": socket_alice.user_id})
+
+        bob_received = socket_bob.get_received("/")
+        assert not any(e["name"] == "user_typing" for e in bob_received)
+
+        socket_alice.emit("stopped_typing", {"swap_id": swap_id, "user_id": socket_alice.user_id})
+        bob_received = socket_bob.get_received("/")
+        assert not any(e["name"] == "user_stopped_typing" for e in bob_received)

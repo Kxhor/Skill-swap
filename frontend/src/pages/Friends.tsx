@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { Users, MessageSquare, User, Star, Check, X } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Friends() {
   const { user: me } = useAuth()
@@ -62,11 +62,7 @@ export default function Friends() {
   const isLoading = swapsLoading || usersLoading
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-8">
           <div className="max-w-5xl mx-auto space-y-10">
             <div>
               <h1 className="text-2xl font-bold">Friends</h1>
@@ -74,7 +70,9 @@ export default function Friends() {
             </div>
 
             {isLoading ? (
-              <p className="text-text-muted">Loading...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+              </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* My Friends List */}
@@ -212,8 +210,6 @@ export default function Friends() {
             </div>
           )}
         </div>
-      </main>
-    </div>
-  </div>
+      </AppShell>
 )
 }

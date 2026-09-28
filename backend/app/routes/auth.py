@@ -20,7 +20,7 @@ def get_csrf_token():
         max_age=3600,
         secure=os.environ.get("FLASK_ENV") == "production",
         samesite="None" if os.environ.get("FLASK_ENV") == "production" else "Lax",
-        httponly=False,
+        httponly=True,
     )
     return resp
 

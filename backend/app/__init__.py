@@ -88,10 +88,22 @@ def create_app():
     allowed_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
     cors.init_app(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
 
+    # ── Socket.IO async mode ────────────────────────────────────────────────
+    # Gunicorn is configured with GeventWebSocketWorker in render.yaml for production.
+    # When deployed in production with gevent available, use "gevent" async_mode.
+    # Otherwise, fallback to "threading" for local development (run.py) and testing.
+    socketio_async_mode = "threading"
+    if os.environ.get("FLASK_ENV") == "production":
+        try:
+            import gevent  # noqa: F401
+            socketio_async_mode = "gevent"
+        except ImportError:
+            socketio_async_mode = "threading"
+
     socketio.init_app(
         app,
         cors_allowed_origins=allowed_origins,
-        async_mode="threading",
+        async_mode=socketio_async_mode,
         logger=False,
         engineio_logger=False,
     )
@@ -127,13 +139,16 @@ def create_app():
     app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
-    # ── Auto-create tables (production first-run) ──────────────────────────
-    with app.app_context():
-        import sys as _sys
-        try:
-            db.create_all()
-        except Exception as _e:
-            print(f"[startup] db.create_all failed: {_e}", file=_sys.stderr)
+    # ── Auto-create tables (non-production only) ─────────────────────────────
+    # Production schema changes must go through `flask db migrate` + `flask db upgrade`
+    # exclusively from now on, never through create_all() or an ad hoc script.
+    if os.environ.get("FLASK_ENV") != "production":
+        with app.app_context():
+            import sys as _sys
+            try:
+                db.create_all()
+            except Exception as _e:
+                print(f"[startup] db.create_all failed: {_e}", file=_sys.stderr)
 
     # ── Health check ────────────────────────────────────────────────────────
     @app.get("/health")

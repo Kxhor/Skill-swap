@@ -35,6 +35,13 @@ def two_users(client):
     })
     bob_python_wanted = resp.get_json()["skill"]
 
+    # Approve the skills so they are eligible for swap operations
+    with client.application.app_context():
+        from app.models.skill import Skill
+        from app.extensions import db
+        Skill.query.update({"status": "approved"})
+        db.session.commit()
+
     return {
         "client": client,
         "alice_python": alice_python,
@@ -89,6 +96,42 @@ class TestSwapLifecycle:
             "wanted_skill_id": two_users["alice_python"]["id"],
         })
         assert resp.status_code == 422  # cannot swap with yourself
+
+    def test_create_swap_rejected_when_offered_skill_not_approved(self, client, two_users, alice_id):
+        """Swap creation fails with 422 if offered skill is not approved."""
+        two_users
+        with client.application.app_context():
+            from app.models.skill import Skill
+            from app.extensions import db
+            webdev = Skill.query.filter_by(name="Web Dev").first()
+            webdev.status = "pending"
+            db.session.commit()
+
+        resp = client.post("/api/swaps", json={
+            "receiver_id": alice_id,
+            "offered_skill_id": two_users["bob_webdev"]["id"],
+            "wanted_skill_id": two_users["alice_python"]["id"],
+        })
+        assert resp.status_code == 422
+        assert resp.get_json()["error"] == "Invalid offered skill"
+
+    def test_create_swap_rejected_when_wanted_skill_not_approved(self, client, two_users, alice_id):
+        """Swap creation fails with 422 if wanted skill is not approved."""
+        two_users
+        with client.application.app_context():
+            from app.models.skill import Skill
+            from app.extensions import db
+            python = Skill.query.filter_by(name="Python").first()
+            python.status = "rejected"
+            db.session.commit()
+
+        resp = client.post("/api/swaps", json={
+            "receiver_id": alice_id,
+            "offered_skill_id": two_users["bob_webdev"]["id"],
+            "wanted_skill_id": two_users["alice_python"]["id"],
+        })
+        assert resp.status_code == 422
+        assert resp.get_json()["error"] == "Invalid wanted skill"
 
     def test_accept_swap(self, client, two_users, alice_id):
         """Full accept flow: Bob sends, Alice logs in and accepts."""

@@ -1,3 +1,4 @@
+import { Skeleton } from '@/components/ui/skeleton'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
@@ -33,24 +34,25 @@ const queryClient = new QueryClient({
 })
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen text-text-muted">Loading...</div>
+  const { user, loading, isAdmin } = useAuth()
+  if (loading) return <div className="flex items-center justify-center h-screen bg-bg-app p-8"><Skeleton className="w-64 h-32 rounded-3xl" /></div>
   if (!user) return <Navigate to="/login" replace />
+  if (isAdmin) return <Navigate to="/admin" replace />
   return <>{children}</>
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, isAdmin } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen text-text-muted">Loading...</div>
+  if (loading) return <div className="flex items-center justify-center h-screen bg-bg-app p-8"><Skeleton className="w-64 h-32 rounded-3xl" /></div>
   if (!user) return <Navigate to="/login" replace />
   if (!isAdmin) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen text-text-muted">Loading...</div>
-  if (user) return <Navigate to="/dashboard" replace />
+  const { user, loading, isAdmin } = useAuth()
+  if (loading) return <div className="flex items-center justify-center h-screen bg-bg-app p-8"><Skeleton className="w-64 h-32 rounded-3xl" /></div>
+  if (user) return <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
   return <>{children}</>
 }
 
@@ -82,6 +84,8 @@ function AppRoutes() {
   )
 }
 
+import { Toaster } from '@/components/ui/toaster'
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -90,6 +94,7 @@ export default function App() {
           <AuthProvider>
             <SocketProvider>
               <AppRoutes />
+              <Toaster />
             </SocketProvider>
           </AuthProvider>
         </BrowserRouter>

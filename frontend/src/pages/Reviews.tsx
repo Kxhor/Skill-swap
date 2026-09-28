@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { Star, MessageSquare } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { AppShell } from '@/components/layout/AppShell'
 
 export default function Reviews() {
   const { user: me } = useAuth()
@@ -24,13 +23,13 @@ export default function Reviews() {
 
   const { data: feedbackData } = useQuery({
     queryKey: ['feedback', me?.id],
-    queryFn: () => api.get(`/api/feedback/${me?.id}`).then((r) => r.data),
+    queryFn: () => api.get(`/api/feedback/user/${me?.id}`).then((r) => r.data),
     enabled: !!me?.id,
   })
 
   const submitFeedback = useMutation({
     mutationFn: (data: { swapId: string; rating: number; comment: string }) =>
-      api.post(`/api/swaps/${data.swapId}/feedback`, { rating: data.rating, comment: data.comment }),
+      api.post('/api/feedback', { swap_id: data.swapId, rating: data.rating, comment: data.comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['swaps'] })
       queryClient.invalidateQueries({ queryKey: ['feedback', me?.id] })
@@ -38,19 +37,16 @@ export default function Reviews() {
   })
 
   const completedSwaps = swaps?.filter((s: any) => s.status === 'completed') || []
+  const feedbackList = feedbackData?.feedback || []
   const feedbackSubmitted = new Set(
-    feedbackData?.given?.map((f: any) => f.swap_id) || []
+    feedbackList.filter((f: any) => f.rater_id === me?.id).map((f: any) => f.swap_id)
   )
 
   const [feedbackRatings, setFeedbackRatings] = useState<Record<string, number>>({})
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({})
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-8">
           <div className="max-w-3xl mx-auto space-y-8">
             <div>
               <h1 className="text-2xl font-bold text-text">My Reviews</h1>
@@ -120,19 +116,19 @@ export default function Reviews() {
                     <Star className="w-5 h-5 text-warning" /> Received Feedback
                   </h2>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-text">{userProfile?.average_rating ?? '—'}</div>
-                    <div className="text-xs text-text-muted">{userProfile?.feedback_received_count ?? 0} reviews</div>
+                    <div className="text-2xl font-bold text-text">{feedbackData?.average_rating ?? userProfile?.average_rating ?? '—'}</div>
+                    <div className="text-xs text-text-muted">{feedbackData?.rating_count ?? userProfile?.feedback_received_count ?? 0} reviews</div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {!feedbackData?.received?.length ? (
+                  {!feedbackList.length ? (
                     <p className="text-sm text-text-muted py-4">No reviews received yet.</p>
                   ) : (
-                    feedbackData.received.map((f: any) => (
+                    feedbackList.map((f: any) => (
                       <div key={f.id} className="border-b border-border last:border-0 pb-4 last:pb-0">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm text-text">{f.reviewer.name}</span>
+                          <span className="font-medium text-sm text-text">{f.rater_name || 'Anonymous'}</span>
                           <span className="text-xs text-text-muted">{formatDate(f.created_at)}</span>
                         </div>
                         <div className="flex gap-0.5 mb-2">
@@ -149,8 +145,6 @@ export default function Reviews() {
 
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }

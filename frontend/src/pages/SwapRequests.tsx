@@ -1,7 +1,6 @@
+import { Skeleton } from '@/components/ui/skeleton'
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
 import { ChatPanel } from '@/components/ChatPanel'
 import { NotificationFeed } from '@/components/NotificationFeed'
@@ -15,6 +14,7 @@ import {
 import { formatDate } from '@/lib/utils'
 import { Check, X, RotateCcw, Plus, Star, ArrowLeftRight, MessageSquare, Clock, BookOpen, CheckCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { AppShell } from '@/components/layout/AppShell'
 
 const tabs = ['All Requests', 'Sent', 'Received', 'Completed']
 
@@ -104,11 +104,7 @@ export default function SwapRequests() {
 
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 flex overflow-hidden">
+    <AppShell mainClassName="flex-1 flex overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden p-8 border-r border-border ">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -140,7 +136,17 @@ export default function SwapRequests() {
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-              {isLoading && <p className="text-text-muted text-center py-8">Loading...</p>}
+              {isLoading && (
+              <div className="space-y-4">
+                {[1,2,3].map(i => (
+                  <div key={i} className="bg-surface-alt border border-border shadow-md rounded-xl p-6 flex flex-col gap-4">
+                    <Skeleton className="w-1/3 h-6" />
+                    <Skeleton className="w-1/4 h-4" />
+                    <Skeleton className="w-1/2 h-4" />
+                  </div>
+                ))}
+              </div>
+            )}
               {!isLoading && displaySwaps.length === 0 && (
                 <p className="text-text-muted text-center py-8">No swap requests found</p>
               )}
@@ -154,7 +160,7 @@ export default function SwapRequests() {
                 return (
                   <div
                     key={swap.id}
-                    className={`glass-card rounded-xl p-6 glass-interactive cursor-pointer ${selectedSwap === swap.id ? 'ring-2 ring-primary' : ''}`}
+                    className={`bg-surface-alt border border-border shadow-md rounded-xl p-6 glass-interactive cursor-pointer ${selectedSwap === swap.id ? 'ring-2 ring-primary' : ''}`}
                     onClick={() => setSelectedSwap(swap.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -192,7 +198,7 @@ export default function SwapRequests() {
                           </div>
                           
                           <div className="flex items-center justify-center w-1/5 absolute left-1/2 -translate-x-1/2 mt-4">
-                            <div className="w-8 h-8 rounded-full -alt flex items-center justify-center text-text-muted border border-border">
+                            <div className="w-8 h-8 rounded-full bg-surface-alt flex items-center justify-center text-text-muted border border-border">
                               <ArrowLeftRight className="w-4 h-4" />
                             </div>
                           </div>
@@ -274,7 +280,7 @@ export default function SwapRequests() {
             </div>
           </div>
 
-          <div className="w-[400px] flex flex-col shrink-0 ml-6 glass-card rounded-[2.5rem] overflow-hidden shadow-2xl h-[calc(100vh-2rem)] z-10 mt-4 mr-4">
+          <div className="w-[400px] flex flex-col shrink-0 ml-6 bg-surface-alt border border-border shadow-md rounded-[2rem] overflow-hidden shadow-2xl h-[calc(100vh-2rem)] z-10 mt-4 mr-4">
             <div className="h-1/2 flex flex-col border-b border-border/50">
               <div className="p-4 border-b border-border flex items-center justify-between">
                 <h2 className="font-bold text-text text-sm">Real-time Notifications</h2>
@@ -308,8 +314,6 @@ export default function SwapRequests() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }

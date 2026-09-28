@@ -79,6 +79,13 @@ def two_users(client):
     b_offered = _add_skill(client, "Guitar", "offered")
     _add_skill(client, "Python", "wanted")
 
+    # Approve the skills so they are valid for swap and public profile tests
+    with client.application.app_context():
+        from app.models.skill import Skill
+        from app.extensions import db
+        Skill.query.update({"status": "approved"})
+        db.session.commit()
+
     return alice_id, bob_id, a_offered, b_offered
 
 
@@ -203,6 +210,55 @@ class TestMatchScore:
 
         _, bob_id, _, _ = self._as_alice(client, two_users)
         assert client.get(f"/api/users/match/{bob_id}").get_json()["score"] == 45
+
+    @patch.dict("os.environ", {"GEMINI_API_KEY": "fake-key"})
+    @patch("google.generativeai.GenerativeModel")
+    def test_gemini_exception_logs_stderr_and_returns_generic_message(self, mock_GM, client, two_users, capsys):
+        mock_model = MagicMock()
+        mock_model.generate_content.side_effect = RuntimeError("Internal quota exceeded or secret leaked")
+        mock_GM.return_value = mock_model
+
+        _, bob_id, _, _ = self._as_alice(client, two_users)
+        r = client.get(f"/api/users/match/{bob_id}")
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data["score"] == 50
+        assert data["reason"] == "AI matching is temporarily unavailable"
+        assert "quota" not in data["reason"].lower()
+        assert "secret" not in data["reason"].lower()
+        captured = capsys.readouterr()
+        assert "[gemini_match]" in captured.err
+        assert "Internal quota exceeded or secret leaked" in captured.err
+
+    @patch.dict("os.environ", {"GEMINI_API_KEY": "fake-key"})
+    @patch("google.generativeai.GenerativeModel")
+    def test_pending_skill_excluded_from_match_prompt(self, mock_GM, client, two_users):
+        """Pending skills are excluded from compute_match and do not leak into prompt."""
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value.text = '{"score": 85, "reason": "Match on approved skills only"}'
+        mock_GM.return_value = mock_model
+
+        alice_id, bob_id, _, _ = self._as_alice(client, two_users)
+
+        # Alice adds a pending skill: "SecretHacking" (new skills default to status='pending')
+        _add_skill(client, "SecretHacking", "offered")
+
+        # Bob wants "SecretHacking" (would be a reciprocal match if included)
+        _login(client, "bob_diff@test.com")
+        _add_skill(client, "SecretHacking", "wanted")
+
+        # Back to Alice and compute match with Bob
+        _login(client, "alice_diff@test.com")
+        r = client.get(f"/api/users/match/{bob_id}")
+        assert r.status_code == 200
+
+        # Verify prompt passed to generate_content does NOT mention SecretHacking
+        assert mock_model.generate_content.called
+        prompt_arg = mock_model.generate_content.call_args[0][0]
+        assert "SecretHacking" not in prompt_arg
+        # Verify approved skills are still in the prompt
+        assert "Python" in prompt_arg
+        assert "Guitar" in prompt_arg
 
 
 # =========================================================================
@@ -427,6 +483,49 @@ class TestEdgeCases:
             assert "id" in s["verified_badge"]
             assert "verified_at" in s["verified_badge"]
             assert "verification_count" in s["verified_badge"]
+
+    def test_public_user_endpoints_filter_unapproved_skills(self, client):
+        """Public list_users and get_user filter out non-approved skills, but profile shows them."""
+        from app.models.skill import Skill
+        from app.extensions import db
+
+        _register(client, "Clara", "clara@test.com")
+        clara_id = client.get("/auth/me").get_json()["user"]["id"]
+        _add_skill(client, "ApprovedSkill", "offered")
+        _add_skill(client, "PendingSkill", "offered")
+        _add_skill(client, "RejectedSkill", "offered")
+
+        with client.application.app_context():
+            Skill.query.filter_by(name="ApprovedSkill").update({"status": "approved"})
+            Skill.query.filter_by(name="PendingSkill").update({"status": "pending"})
+            Skill.query.filter_by(name="RejectedSkill").update({"status": "rejected"})
+            db.session.commit()
+
+        # 1. Own profile (GET /api/users/profile) shows all (approved, pending, rejected)
+        profile_resp = client.get("/api/users/profile")
+        assert profile_resp.status_code == 200
+        offered_names = [s["skill_name"] for s in profile_resp.get_json()["user"]["skills_offered"]]
+        assert "ApprovedSkill" in offered_names
+        assert "PendingSkill" in offered_names
+        assert "RejectedSkill" in offered_names
+
+        # 2. Public profile (GET /api/users/<id>) only shows approved
+        user_resp = client.get(f"/api/users/{clara_id}")
+        assert user_resp.status_code == 200
+        public_offered = [s["skill_name"] for s in user_resp.get_json()["user"]["skills_offered"]]
+        assert "ApprovedSkill" in public_offered
+        assert "PendingSkill" not in public_offered
+        assert "RejectedSkill" not in public_offered
+
+        # 3. Public list (GET /api/users) only shows approved
+        list_resp = client.get("/api/users")
+        assert list_resp.status_code == 200
+        clara_entry = next((u for u in list_resp.get_json()["users"] if u["id"] == clara_id), None)
+        assert clara_entry is not None
+        list_offered = [s["skill_name"] for s in clara_entry["skills_offered"]]
+        assert "ApprovedSkill" in list_offered
+        assert "PendingSkill" not in list_offered
+        assert "RejectedSkill" not in list_offered
 
 
 # =========================================================================

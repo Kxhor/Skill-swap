@@ -1,3 +1,4 @@
+import { Skeleton } from '@/components/ui/skeleton'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '@/lib/api'
 import { useQuery } from '@tanstack/react-query'
@@ -6,6 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { formatTime } from '@/lib/utils'
 import { Send } from 'lucide-react'
+import { useToast } from '@/components/ui/toaster'
 
 interface Props {
   swapId: string
@@ -24,6 +26,7 @@ interface Message {
 
 export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
   const { user } = useAuth()
+  const { toast } = useToast()
   const { socket, isOnline } = useSocket()
   const [text, setText] = useState('')
   const [liveMessages, setLiveMessages] = useState<Message[]>([])
@@ -71,7 +74,7 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
     }
 
     const errorHandler = (data: { message: string }) => {
-      alert(data.message)
+      toast({ title: 'Error', description: data.message, variant: 'danger' })
     }
 
     socket.on('new_message', msgHandler)
@@ -157,7 +160,13 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {isLoading && <p className="text-xs text-text-muted text-center">Loading...</p>}
+        {isLoading && (
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex justify-end"><Skeleton className="w-32 h-8 rounded-xl" /></div>
+              <div className="flex justify-start"><Skeleton className="w-40 h-8 rounded-xl" /></div>
+              <div className="flex justify-end"><Skeleton className="w-24 h-8 rounded-xl" /></div>
+            </div>
+          )}
         {!isLoading && messages.length === 0 && (
           <p className="text-xs text-text-muted text-center">No messages yet</p>
         )}
@@ -209,7 +218,7 @@ export function ChatPanel({ swapId, otherUserId, otherUserName }: Props) {
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Type a message..."
             maxLength={500}
-            className="flex-1 glass-input px-3 py-2 text-sm"
+            className="flex-1 bg-surface border border-border text-white px-3 py-2 text-sm rounded-full focus:outline-none focus:border-primary/50"
           />
           <Button type="submit" size="icon" variant="primary" disabled={!text.trim() || !socket}>
             <Send className="w-4 h-4" />

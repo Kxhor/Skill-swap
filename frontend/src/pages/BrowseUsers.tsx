@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { useAuth } from '@/context/AuthContext'
 import { useSocket } from '@/context/SocketContext'
 import { Button } from '@/components/ui/button'
 import { MatchScoreBadge } from '@/components/MatchScoreBadge'
 import { SkillHeatmap } from '@/components/SkillHeatmap'
 import { Search, BadgeCheck } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function BrowseUsers() {
   const navigate = useNavigate()
@@ -35,9 +36,7 @@ export default function BrowseUsers() {
   const totalPages = Math.ceil(total / 12)
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+    <AppShell hideNavbar={true} mainClassName="flex-1 overflow-y-auto p-4 md:p-8 relative">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold text-text mb-6">Browse Users</h1>
 
@@ -62,7 +61,13 @@ export default function BrowseUsers() {
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            {isLoading && <p className="col-span-3 text-text-muted text-center py-8">Loading...</p>}
+            {isLoading && (
+              <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="h-64 w-full" />
+                ))}
+              </div>
+            )}
             {!isLoading && users.length === 0 && (
               <p className="col-span-3 text-text-muted text-center py-8">No users found</p>
             )}
@@ -152,7 +157,6 @@ export default function BrowseUsers() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </AppShell>
   )
 }

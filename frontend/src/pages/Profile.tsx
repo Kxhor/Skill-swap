@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
-import { Sidebar } from '@/components/layout/Sidebar'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { MatchScoreBadge } from '@/components/MatchScoreBadge'
@@ -99,17 +100,21 @@ export default function Profile() {
   })
 
   if (isLoading) return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <main className="flex-1 p-8"><p className="text-text-muted">Loading...</p></main>
-    </div>
+    <AppShell hideNavbar={true} mainClassName="flex-1 p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      </div>
+    </AppShell>
   )
 
   if (isError) return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 ">
-      <Sidebar />
-      <main className="flex-1 p-8"><p className="text-text-muted text-center py-8">Failed to load data</p></main>
-    </div>
+    <AppShell hideNavbar={true} mainClassName="flex-1 p-8">
+      <p className="text-text-muted text-center py-8">Failed to load data</p>
+    </AppShell>
   )
 
   const p = data
@@ -121,9 +126,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 p-6">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8 glass-panel rounded-3xl">
+    <>
+      <AppShell hideNavbar={true} mainClassName="flex-1 overflow-y-auto p-8 glass-panel rounded-3xl">
         <div className="max-w-4xl mx-auto">
           {/* Profile Card */}
           <div className="glass-card rounded-2xl p-8 mb-8 relative overflow-hidden">
@@ -215,7 +219,7 @@ export default function Profile() {
                 )}
 
                 {p?.bio && (
-                  <div className="mt-4 p-4 -alt rounded-xl border border-border/60 text-sm text-text">
+                  <div className="mt-4 p-4 bg-surface-alt rounded-xl border border-border text-sm text-text">
                     <p className="font-semibold text-xs text-text-muted uppercase tracking-wider mb-1">About Me</p>
                     {p.bio}
                   </div>
@@ -396,13 +400,13 @@ export default function Profile() {
             </div>
           )}
         </div>
-      </main>
+      </AppShell>
       {showSwapModal && (
         <SwapRequestModal 
           targetUser={p} 
           onClose={() => setShowSwapModal(false)} 
         />
       )}
-    </div>
+    </>
   )
 }

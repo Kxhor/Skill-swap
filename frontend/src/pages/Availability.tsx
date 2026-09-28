@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
 import { Calendar, Plus, X } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
@@ -42,11 +42,7 @@ export default function Availability() {
   })
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-8">
           <div className="max-w-2xl mx-auto">
             <div className="mb-8">
               <h1 className="text-2xl font-bold text-text">Availability</h1>
@@ -90,7 +86,9 @@ export default function Availability() {
               )}
 
               {isLoading ? (
-                <p className="text-text-muted">Loading...</p>
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+                </div>
               ) : (
                 <div className="space-y-3">
                   {(userProfile?.availability || []).length === 0 && (
@@ -117,8 +115,6 @@ export default function Availability() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }

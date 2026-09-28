@@ -43,7 +43,7 @@ export function SkillSection({
   }
 
   return (
-    <div className="glass-card p-6 mb-6">
+    <div className="bg-surface-alt border border-border shadow-md rounded-2xl p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-lg text-text">{title}</h3>
         {isOwn && !isAdding && (
@@ -54,7 +54,7 @@ export function SkillSection({
       </div>
 
       {isOwn && isAdding && (
-        <div className="mb-4 p-4 glass-card">
+        <div className="mb-4 p-4 bg-surface-alt border border-border shadow-md rounded-2xl">
           <form onSubmit={handleAdd} className="flex gap-3 items-start">
             <div className="flex-1">
               <input
@@ -63,7 +63,7 @@ export function SkillSection({
                 value={newSkill}
                 onChange={(e) => setNewSkill(e.target.value)}
                 list="skill-options"
-                className="w-full glass-input px-3 py-2 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2 text-sm"
                 required
               />
               <datalist id="skill-options">
@@ -75,7 +75,7 @@ export function SkillSection({
             <select
               value={proficiency}
               onChange={(e) => setProficiency(e.target.value)}
-              className="w-32 glass-input px-3 py-2 text-sm"
+              className="w-32 bg-surface border border-border text-white px-3 py-2 text-sm"
             >
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
@@ -97,7 +97,7 @@ export function SkillSection({
           {skills.map((s) => (
             <div
               key={s.id}
-              className="group flex items-center gap-2 glass-pill px-3 py-1.5 rounded-full text-sm"
+              className="group flex items-center gap-2 bg-surface-alt border border-border px-3 py-1.5 rounded-full text-sm"
             >
               <Star className="w-3 h-3 text-accent" />
               <span className="font-medium">{s.skill_name}</span>

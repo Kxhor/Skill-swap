@@ -98,11 +98,23 @@ def create_swap():
         return jsonify({"error": "Invalid user"}), 404
 
     offered_skill = UserSkill.query.get(offered_skill_id)
-    if not offered_skill or offered_skill.user_id != current_user.id or offered_skill.type != "offered":
+    if (
+        not offered_skill
+        or offered_skill.user_id != current_user.id
+        or offered_skill.type != "offered"
+        or not offered_skill.skill
+        or offered_skill.skill.status != "approved"
+    ):
         return jsonify({"error": "Invalid offered skill"}), 422
 
     wanted_skill = UserSkill.query.get(wanted_skill_id)
-    if not wanted_skill or wanted_skill.user_id != receiver_id or wanted_skill.type != "offered":
+    if (
+        not wanted_skill
+        or wanted_skill.user_id != receiver_id
+        or wanted_skill.type != "offered"
+        or not wanted_skill.skill
+        or wanted_skill.skill.status != "approved"
+    ):
         return jsonify({"error": "Invalid wanted skill"}), 422
 
     if offered_skill_id == wanted_skill_id:
@@ -207,9 +219,15 @@ def accept_swap(swap_id):
         return jsonify({"error": "Swap not found"}), 404
     if swap.receiver_id != current_user.id:
         return jsonify({"error": "Only the receiver can accept this swap"}), 403
-    if swap.status != "pending":
+    result = db.session.execute(
+        db.update(SwapRequest)
+        .where(SwapRequest.id == swap_id, SwapRequest.status == "pending")
+        .values(status="accepted")
+    )
+    if result.rowcount == 0:
         return jsonify({"error": "This swap request has already been processed"}), 409
 
+    # The in-memory swap object needs its status updated since we used db.update
     swap.status = "accepted"
 
     system_msg = ChatMessage(
@@ -263,7 +281,12 @@ def reject_swap(swap_id):
         return jsonify({"error": "Swap not found"}), 404
     if swap.receiver_id != current_user.id:
         return jsonify({"error": "Only the receiver can reject this swap"}), 403
-    if swap.status != "pending":
+    result = db.session.execute(
+        db.update(SwapRequest)
+        .where(SwapRequest.id == swap_id, SwapRequest.status == "pending")
+        .values(status="rejected")
+    )
+    if result.rowcount == 0:
         return jsonify({"error": "This swap request has already been processed"}), 409
 
     swap.status = "rejected"
@@ -306,7 +329,12 @@ def cancel_swap(swap_id):
         return jsonify({"error": "Swap not found"}), 404
     if swap.sender_id != current_user.id:
         return jsonify({"error": "Only the sender can cancel this swap"}), 403
-    if swap.status != "pending":
+    result = db.session.execute(
+        db.update(SwapRequest)
+        .where(SwapRequest.id == swap_id, SwapRequest.status == "pending")
+        .values(status="cancelled")
+    )
+    if result.rowcount == 0:
         return jsonify({"error": "Only pending swaps can be cancelled"}), 409
 
     swap.status = "cancelled"
@@ -330,9 +358,15 @@ def complete_swap(swap_id):
         return jsonify({"error": "Swap not found"}), 404
     if swap.sender_id != current_user.id and swap.receiver_id != current_user.id:
         return jsonify({"error": "Unauthorized"}), 403
-    if swap.status != "accepted":
+    result = db.session.execute(
+        db.update(SwapRequest)
+        .where(SwapRequest.id == swap_id, SwapRequest.status == "accepted")
+        .values(status="completed")
+    )
+    if result.rowcount == 0:
         return jsonify({"error": "Only accepted swaps can be marked as completed"}), 409
 
+    # The in-memory swap object needs its status updated since we used db.update
     swap.status = "completed"
 
     system_msg = ChatMessage(
@@ -368,7 +402,7 @@ def get_messages(swap_id):
         return jsonify({"error": "Chat is not available for this swap status"}), 400
 
     page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 50, type=int)
+    per_page = min(request.args.get("per_page", 50, type=int), 100)
     pagination = ChatMessage.query.filter_by(swap_id=swap_id).order_by(ChatMessage.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     messages = pagination.items
@@ -498,11 +532,22 @@ def confirm_session(swap_id):
     session = ScheduledSession.query.filter_by(swap_id=swap_id).first()
     if not session:
         return jsonify({"error": "No session proposed"}), 404
-    if session.proposer_id == current_user.id:
-        return jsonify({"error": "You cannot confirm your own proposal"}), 422
-    if session.status != "proposed":
-        return jsonify({"error": f"Session is already {session.status}"}), 422
+    result = db.session.execute(
+        db.update(ScheduledSession)
+        .where(
+            ScheduledSession.id == session.id,
+            ScheduledSession.status == "proposed",
+            ScheduledSession.proposer_id != current_user.id
+        )
+        .values(status="confirmed")
+    )
+    if result.rowcount == 0:
+        session_check = ScheduledSession.query.get(session.id)
+        if session_check.proposer_id == current_user.id:
+            return jsonify({"error": "You cannot confirm your own proposal"}), 422
+        if session_check.status != "proposed":
+            return jsonify({"error": f"Session is already {session_check.status}"}), 422
 
-    session.status = "confirmed"
     db.session.commit()
+    session = ScheduledSession.query.get(session.id)
     return jsonify({"session": session.to_dict()}), 200

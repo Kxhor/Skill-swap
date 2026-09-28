@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
+import { AppShell } from '@/components/layout/AppShell'
+import { StatCard } from '@/components/StatCard'
 import { Button } from '@/components/ui/button'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { User as UserIcon, BookOpen, ArrowLeftRight, Star, Plus } from 'lucide-react'
@@ -35,11 +35,8 @@ export default function Dashboard() {
   const activeSwapsCount = swaps?.filter((s: any) => s.status === 'accepted').length ?? 0
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+    <>
+      <AppShell mainClassName="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -63,21 +60,10 @@ export default function Dashboard() {
                 { label: 'Skills Wanted', value: wanted.length, icon: BookOpen, color: 'text-success bg-success/10', link: '/skills' },
                 { label: 'Active Swaps', value: activeSwapsCount, icon: ArrowLeftRight, color: 'text-info bg-info/10', link: '/my-swaps' },
                 { label: 'Rating', value: `${stats?.average_rating ?? '0'}/5`, icon: Star, color: 'text-warning bg-warning/10', link: '/reviews' },
-              ].map(({ label, value, icon: Icon, color, link }) => (
-                <div key={label} className="glass-card rounded-xl p-5 flex flex-col glass-interactive">
-                  <div className="flex flex-col mb-4">
-                    <div className="flex items-start justify-between w-full mb-2">
-                      <div className={`w-10 h-10 rounded-full ${color} flex items-center justify-center bg-white/10`}>
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                    <p className="text-4xl font-bold text-white tracking-tight">{value}</p>
-                    <p className="text-sm text-text-muted font-medium uppercase tracking-wider mt-1">{label}</p>
-                  </div>
-                  <Link to={link} className="text-sm text-primary font-medium hover:underline mt-auto">
-                    {label === 'Rating' ? 'View reviews →' : 'View all →'}
-                  </Link>
-                </div>
+              ].map(({ label, value, icon: Icon, link }) => (
+                <Link to={link} key={label} className="block transition-transform hover:-translate-y-1">
+                  <StatCard label={label} value={value} icon={Icon} />
+                </Link>
               ))}
             </div>
 
@@ -227,14 +213,13 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        </main>
-      </div>
+      </AppShell>
       {selectedUserForSwap && (
         <SwapRequestModal 
           targetUser={selectedUserForSwap} 
           onClose={() => setSelectedUserForSwap(null)} 
         />
       )}
-    </div>
+    </>
   )
 }

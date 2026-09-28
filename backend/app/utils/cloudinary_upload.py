@@ -44,4 +44,5 @@ def delete_photo(public_id):
         cloudinary.uploader.destroy(public_id)
         return True, None
     except Exception as e:
-        return False, str(e)
+        print(f"[cloudinary_upload] Delete failed: {e}")
+        return False, "Failed to delete photo. Please try again."

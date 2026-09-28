@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import json
 from datetime import datetime, timezone, timedelta
@@ -6,6 +7,7 @@ from app.extensions import db
 from app.models.match_score import MatchScore
 from app.models.user import User
 from app.models.user_skill import UserSkill
+from app.models.skill import Skill
 
 
 def compute_match(user_a_id: str, user_b_id: str) -> dict:
@@ -22,10 +24,30 @@ def compute_match(user_a_id: str, user_b_id: str) -> dict:
     if not user_a or not user_b:
         return {"score": 0, "reason": "User not found", "cached": False}
 
-    a_offered = UserSkill.query.filter_by(user_id=user_a_id, type="offered").all()
-    a_wanted = UserSkill.query.filter_by(user_id=user_a_id, type="wanted").all()
-    b_offered = UserSkill.query.filter_by(user_id=user_b_id, type="offered").all()
-    b_wanted = UserSkill.query.filter_by(user_id=user_b_id, type="wanted").all()
+    a_offered = (
+        UserSkill.query
+        .join(Skill)
+        .filter(UserSkill.user_id == user_a_id, UserSkill.type == "offered", Skill.status == "approved")
+        .all()
+    )
+    a_wanted = (
+        UserSkill.query
+        .join(Skill)
+        .filter(UserSkill.user_id == user_a_id, UserSkill.type == "wanted", Skill.status == "approved")
+        .all()
+    )
+    b_offered = (
+        UserSkill.query
+        .join(Skill)
+        .filter(UserSkill.user_id == user_b_id, UserSkill.type == "offered", Skill.status == "approved")
+        .all()
+    )
+    b_wanted = (
+        UserSkill.query
+        .join(Skill)
+        .filter(UserSkill.user_id == user_b_id, UserSkill.type == "wanted", Skill.status == "approved")
+        .all()
+    )
 
     if not a_offered and not a_wanted and not b_offered and not b_wanted:
         return {"score": 0, "reason": "Not enough skill data", "cached": False}
@@ -61,7 +83,8 @@ def _call_gemini(name_a: str, offered_a: list[str], wanted_a: list[str],
         text = resp.text.strip()
         return _parse_response(text)
     except Exception as e:
-        return 50, f"AI matching error: {str(e)}"
+        print(f"[gemini_match] AI matching failed: {e}", file=sys.stderr)
+        return 50, "AI matching is temporarily unavailable"
 
 
 def _build_prompt(name_a, offered_a, wanted_a, name_b, offered_b, wanted_b):

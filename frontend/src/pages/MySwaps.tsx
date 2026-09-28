@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { ArrowLeftRight, CheckCircle, Clock } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 
 export default function MySwaps() {
@@ -16,11 +16,7 @@ export default function MySwaps() {
   const activeSwaps = swaps?.filter((s: any) => s.status === 'accepted' || s.status === 'completed') || []
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-8">
           <div className="max-w-4xl mx-auto">
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -29,7 +25,11 @@ export default function MySwaps() {
               </div>
             </div>
 
-            {isLoading && <p className="text-text-muted">Loading...</p>}
+            {isLoading && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
+              </div>
+            )}
             {!isLoading && activeSwaps.length === 0 && (
               <div className="text-center py-12 glass-panel rounded-xl fast-transition gpu-accelerate">
                 <ArrowLeftRight className="w-12 h-12 text-border mx-auto mb-4" />
@@ -75,8 +75,6 @@ export default function MySwaps() {
 })}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { User, Shield, Moon, Sun, Trash2 } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Settings() {
   const queryClient = useQueryClient()
@@ -109,23 +110,16 @@ export default function Settings() {
   }
 
   const handleDeleteAccount = async () => {
-    if (window.confirm('Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.')) {
-      try {
-        // Since delete account endpoint might not be in backend, we simulate or make the call
+    try {
         await api.delete('/api/users/profile').catch(() => {})
         logout()
       } catch {
         logout()
       }
-    }
   }
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8 bg-surface">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-8 bg-surface">
           <div className="max-w-4xl mx-auto">
             <div className="mb-8">
               <h1 className="text-2xl font-bold">Settings</h1>
@@ -173,7 +167,9 @@ export default function Settings() {
               {/* Settings Content Area */}
               <div className="flex-1 glass-panel rounded-xl p-6 fast-transition gpu-accelerate">
                 {isLoading ? (
-                  <p className="text-text-muted">Loading...</p>
+                  <div className="space-y-6">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+                  </div>
                 ) : (
                   <>
                     {activeTab === 'profile' && (
@@ -321,7 +317,7 @@ export default function Settings() {
                           <p className="text-sm text-text-muted">Customize the look and feel of the platform.</p>
                         </div>
 
-                        <div className="flex items-center justify-between p-4  rounded-xl border border-border">
+                        <div className="flex items-center justify-between p-4 bg-surface-alt rounded-xl border border-border">
                           <div className="flex items-center gap-3">
                             {darkMode ? <Moon className="w-5 h-5 text-primary" /> : <Sun className="w-5 h-5 text-warning" />}
                             <div>
@@ -357,9 +353,22 @@ export default function Settings() {
                             <p className="font-semibold text-danger text-sm">Delete Account</p>
                             <p className="text-xs text-text-muted">This action is irreversible. All swaps, messages, and reviews will be wiped.</p>
                           </div>
-                          <Button onClick={handleDeleteAccount} variant="danger" className="shrink-0">
-                            Delete My Account
-                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="danger" className="shrink-0">Delete My Account</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete Account</DialogTitle>
+                                <DialogDescription>
+                                  Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button variant="danger" onClick={handleDeleteAccount}>Yes, delete my account</Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </div>
                     )}
@@ -368,8 +377,8 @@ export default function Settings() {
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }
+
+

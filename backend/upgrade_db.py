@@ -1,3 +1,14 @@
+# =============================================================================
+# HISTORICAL MIGRATION SCRIPT — DO NOT RUN
+# =============================================================================
+# This was a one-time historical upgrade script that has already been applied
+# to the live database (adding user social fields, swap_id, and swap_username).
+#
+# Going forward, all schema changes must be managed exclusively through Alembic
+# migrations (`flask db migrate` + `flask db upgrade`). Do not execute this
+# script directly.
+# =============================================================================
+
 from app import create_app
 from app.extensions import db
 from sqlalchemy import text

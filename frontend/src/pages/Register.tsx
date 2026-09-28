@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
+import api, { setCsrfToken } from '@/lib/api'
 
 export default function Register() {
   const { register } = useAuth()
@@ -13,11 +14,28 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    api.get('/auth/csrf-token')
+      .then((res) => {
+        if (res.data?.csrf_token) setCsrfToken(res.data.csrf_token)
+      })
+      .catch(() => {})
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
+      try {
+        const tokenRes = await api.get('/auth/csrf-token')
+        if (tokenRes.data?.csrf_token) {
+          setCsrfToken(tokenRes.data.csrf_token)
+        }
+      } catch {
+        // Fallback
+      }
+
       await register(name, email, password, location || undefined)
       navigate('/dashboard')
     } catch (err: any) {
@@ -36,7 +54,7 @@ export default function Register() {
           <p className="text-text-muted mt-2">Join the learning community</p>
         </div>
 
-        <div className="glass-card p-8">
+        <div className="bg-surface-alt border border-border shadow-xl rounded-3xl p-8">
           <h2 className="text-xl font-semibold mb-6">Create account</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -49,7 +67,7 @@ export default function Register() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full glass-input px-3 py-2.5 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:border-primary/50"
                 required
               />
             </div>
@@ -62,7 +80,7 @@ export default function Register() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full glass-input px-3 py-2.5 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:border-primary/50"
                 required
               />
             </div>
@@ -75,7 +93,7 @@ export default function Register() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full glass-input px-3 py-2.5 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:border-primary/50"
                 required
                 minLength={6}
               />
@@ -89,7 +107,7 @@ export default function Register() {
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full glass-input px-3 py-2.5 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:border-primary/50"
               />
             </div>
 

@@ -1,16 +1,17 @@
+import { Skeleton } from '@/components/ui/skeleton'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useState } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { 
   Users, BookOpen, ArrowLeftRight, Star, 
-  CheckCircle, ArrowUpRight, ArrowDownRight, 
+  CheckCircle, 
   Calendar as CalendarIcon, Check, X, Megaphone,
   FileText, Download, UserCog
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { 
+import { AppShell } from '@/components/layout/AppShell'
+import { StatCard } from '@/components/StatCard'
+import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts'
@@ -98,11 +99,7 @@ export default function AdminDashboard() {
     : []
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -121,28 +118,14 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-6 gap-4 mb-6">
               {cards.map(({ label, value, icon: Icon, color, trend, isUp }) => (
-                <div key={label} className="glass-card rounded-xl p-6 glass-interactive relative overflow-hidden group">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-muted font-medium mb-0.5">{label}</p>
-                      <p className="text-xl font-bold text-text leading-none">{value}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 mt-auto">
-                    {isUp ? <ArrowUpRight className="w-3 h-3 text-success" /> : <ArrowDownRight className="w-3 h-3 text-danger" />}
-                    <span className={`text-[10px] font-medium ${isUp ? 'text-success' : 'text-danger'}`}>{trend} from last week</span>
-                  </div>
-                </div>
+                <StatCard key={label} label={label} value={value} icon={Icon} colorClass={color} trend={trend} isUp={isUp} />
               ))}
             </div>
 
             <div className="grid grid-cols-3 gap-6 mb-6">
               <div className="glass-card rounded-xl overflow-hidden col-span-2">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-bold text-text">Platform Overview</h2>
+                  <div className="flex items-center gap-2"><h2 className="font-bold text-text">Platform Overview</h2><span className="text-xs bg-surface text-text-muted px-2 py-0.5 rounded-full border border-border">Sample data</span></div>
                   <select className="bg-surface border border-border rounded-lg text-sm px-3 py-1.5 focus:outline-none">
                     <option>Last 7 Days</option>
                   </select>
@@ -164,7 +147,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="glass-card p-5">
-                <h2 className="font-bold text-text mb-6">Swap Requests Status</h2>
+                <div className="flex items-center gap-2 mb-6"><h2 className="font-bold text-text">Swap Requests Status</h2><span className="text-xs bg-surface text-text-muted px-2 py-0.5 rounded-full border border-border">Sample data</span></div>
                 <div className="h-[200px] flex justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -224,7 +207,7 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody>
                     {skillsLoading ? (
-                      <tr><td colSpan={5} className="py-4 text-center text-text-muted">Loading...</td></tr>
+                      <tr><td colSpan={5} className="py-4"><Skeleton className="h-10 w-full rounded-lg" /></td></tr>
                     ) : pendingApprovals.length === 0 ? (
                       <tr><td colSpan={5} className="py-4 text-center text-text-muted">No pending approvals</td></tr>
                     ) : (
@@ -277,7 +260,7 @@ export default function AdminDashboard() {
                         </div>
                         <span className="text-text-muted">{skill.users} users</span>
                       </div>
-                      <div className="w-full -alt rounded-full h-1.5 ml-5">
+                      <div className="w-full bg-surface-alt rounded-full h-1.5 ml-5">
                         <div className="bg-primary h-1.5 rounded-full" style={{ width: skill.width }}></div>
                       </div>
                     </div>
@@ -415,8 +398,10 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }
+
+
+
+

@@ -18,7 +18,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="h-16 border-b border-border/10 flex items-center justify-between px-6 shrink-0 z-30">
+    <header className="h-16 bg-surface border border-border flex items-center justify-between px-6 shrink-0 z-30 rounded-2xl shadow-lg">
       <div className="flex items-center gap-4">
         <button
           onClick={handleToggleSidebar}

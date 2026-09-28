@@ -245,6 +245,14 @@ class TestCSRF:
         })
         assert resp.status_code == 201
 
+    def test_csrf_cookie_is_httponly(self, app):
+        client = app.test_client()
+        resp = client.get("/auth/csrf-token")
+        assert resp.status_code == 200
+        set_cookie = resp.headers.get("Set-Cookie", "")
+        assert "csrf_token=" in set_cookie
+        assert "HttpOnly" in set_cookie
+
 
 class TestIsolation:
     def test_user_blocked_from_admin(self, client):
@@ -263,3 +271,24 @@ class TestIsolation:
 
         resp = admin_client.post("/api/feedback", json={})
         assert resp.status_code == 403
+
+    def test_admin_blocked_from_all_users_routes_including_stats(self, admin_client):
+        resp = admin_client.get("/api/users")
+        assert resp.status_code == 403
+
+        resp = admin_client.get("/api/users/stats/community")
+        assert resp.status_code == 403
+
+    def test_anonymous_and_user_can_access_community_stats(self, client):
+        # Anonymous access
+        resp = client.get("/api/users/stats/community")
+        assert resp.status_code == 200
+        assert "total_users" in resp.get_json()
+
+        # Logged-in user access
+        client.post("/auth/register", json={
+            "name": "Stats User", "email": "statsuser@example.com", "password": "password123",
+        })
+        resp = client.get("/api/users/stats/community")
+        assert resp.status_code == 200
+        assert "total_users" in resp.get_json()

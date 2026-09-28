@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { Bell, ArrowLeftRight, CheckCircle, XCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { AppShell } from '@/components/layout/AppShell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Notifications() {
   const { user } = useAuth()
@@ -26,11 +26,7 @@ export default function Notifications() {
     .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8">
+    <AppShell mainClassName="flex-1 overflow-y-auto p-8">
           <div className="max-w-3xl mx-auto">
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -39,7 +35,11 @@ export default function Notifications() {
               </div>
             </div>
 
-            {isLoading && <p className="text-text-muted">Loading...</p>}
+            {isLoading && (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+              </div>
+            )}
             
             {!isLoading && notifications.length === 0 && (
               <div className="text-center py-12 glass-panel rounded-xl fast-transition gpu-accelerate">
@@ -87,8 +87,6 @@ export default function Notifications() {
 })}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }

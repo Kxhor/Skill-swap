@@ -1,11 +1,11 @@
+import { Skeleton } from '@/components/ui/skeleton'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Navbar } from '@/components/layout/Navbar'
 import { ChatPanel } from '@/components/ChatPanel'
 import api from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { MessageSquare } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
 
 export default function Messages() {
   const { user } = useAuth()
@@ -30,14 +30,10 @@ export default function Messages() {
   const otherUser = isSender ? selectedSwap?.receiver : selectedSwap?.sender
 
   return (
-    <div className="flex h-screen p-4 md:p-6 gap-6 text-text">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <Navbar />
-        <main className="flex-1 overflow-hidden flex glass-card mr-6 mt-6 mb-6 rounded-[2.5rem] border border-border/50 shadow-2xl fast-transition gpu-accelerate">
+    <AppShell mainClassName="flex-1 overflow-hidden flex bg-surface-alt rounded-3xl border border-border">
           {/* Sidebar list of chats */}
           <div className="w-1/3 border-r border-border flex flex-col">
-            <div className="p-4 border-b border-border -alt flex items-center justify-between">
+            <div className="p-4 border-b border-border bg-surface-alt flex items-center justify-between">
               <h2 className="font-semibold text-text">Conversations</h2>
               <label className="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
                 <input 
@@ -51,7 +47,19 @@ export default function Messages() {
             </div>
             
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {isLoading && <p className="p-4 text-sm text-text-muted">Loading...</p>}
+              {isLoading && (
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {!isLoading && chatableSwaps.length === 0 && (
                 <p className="p-4 text-sm text-text-muted text-center">No active conversations yet.</p>
               )}
@@ -99,7 +107,7 @@ export default function Messages() {
           </div>
 
           {/* Chat Window */}
-          <div className="flex-1 flex flex-col -alt/30">
+          <div className="flex-1 flex flex-col bg-surface-alt">
             {selectedSwapId && otherUser ? (
               <ChatPanel 
                 swapId={selectedSwapId} 
@@ -113,8 +121,7 @@ export default function Messages() {
               </div>
             )}
           </div>
-        </main>
-      </div>
-    </div>
+        </AppShell>
   )
 }
+

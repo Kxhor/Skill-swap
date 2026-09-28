@@ -14,10 +14,10 @@ from datetime import time
 users_bp = Blueprint("users", __name__)
 
 
+@users_bp.before_request
 def _reject_admin():
     if hasattr(current_user, "role"):
         return jsonify({"error": "Admin accounts cannot access user endpoints"}), 403
-    return None
 
 
 @users_bp.route("", methods=["GET"])
@@ -40,7 +40,7 @@ def list_users():
         user_ids = (
             UserSkill.query
             .join(Skill)
-            .filter(Skill.name.ilike(f"%{skill}%"), UserSkill.type == skill_type)
+            .filter(Skill.name.ilike(f"%{skill}%"), UserSkill.type == skill_type, Skill.status == "approved")
             .with_entities(UserSkill.user_id)
             .distinct()
             .subquery()
@@ -56,7 +56,7 @@ def list_users():
     all_skills = (
         UserSkill.query
         .join(Skill)
-        .filter(UserSkill.user_id.in_(user_ids_on_page))
+        .filter(UserSkill.user_id.in_(user_ids_on_page), Skill.status == "approved")
         .options(db.joinedload(UserSkill.skill), db.joinedload(UserSkill.verified_badge))
         .all()
     )
@@ -91,10 +91,6 @@ def list_users():
 @login_required
 @limiter.limit("20 per minute")
 def profile():
-    reject = _reject_admin()
-    if reject:
-        return reject
-
     if request.method == "DELETE":
         # Anonymize user to preserve swap history
         current_user.name = "Deleted User"
@@ -180,10 +176,6 @@ def profile():
 @login_required
 @limiter.limit("5 per minute")
 def upload_photo_route():
-    reject = _reject_admin()
-    if reject:
-        return reject
-        
     if request.method == "DELETE":
         current_user.photo_url = None
         db.session.commit()
@@ -205,9 +197,6 @@ def upload_photo_route():
 @users_bp.route("/skills", methods=["GET"])
 @login_required
 def get_my_skills():
-    reject = _reject_admin()
-    if reject:
-        return reject
     offered = UserSkill.query.filter_by(user_id=current_user.id, type="offered").all()
     wanted = UserSkill.query.filter_by(user_id=current_user.id, type="wanted").all()
     return jsonify({
@@ -220,9 +209,6 @@ def get_my_skills():
 @login_required
 @limiter.limit("10 per minute")
 def add_skill():
-    reject = _reject_admin()
-    if reject:
-        return reject
     data = request.get_json(silent=True) or {}
     skill_name = data.get("skill_name", "").strip()
     skill_type = data.get("type", "offered")
@@ -268,9 +254,6 @@ def add_skill():
 @users_bp.route("/skills/<skill_id>", methods=["PUT", "DELETE"])
 @login_required
 def modify_skill(skill_id):
-    reject = _reject_admin()
-    if reject:
-        return reject
     user_skill = UserSkill.query.get(skill_id)
     if not user_skill:
         return jsonify({"error": "Skill not found"}), 404
@@ -296,9 +279,6 @@ def modify_skill(skill_id):
 @users_bp.route("/availability", methods=["GET", "POST"])
 @login_required
 def manage_availability():
-    reject = _reject_admin()
-    if reject:
-        return reject
     if request.method == "GET":
         slots = Availability.query.filter_by(user_id=current_user.id).all()
         return jsonify({"availability": [s.to_dict() for s in slots]}), 200
@@ -344,9 +324,6 @@ def manage_availability():
 @users_bp.route("/availability/<slot_id>", methods=["DELETE"])
 @login_required
 def delete_availability(slot_id):
-    reject = _reject_admin()
-    if reject:
-        return reject
     slot = Availability.query.get(slot_id)
     if not slot:
         return jsonify({"error": "Availability slot not found"}), 404
@@ -380,7 +357,10 @@ def community_stats():
 
     skills_offered = db.session.query(
         Skill.name, db.func.count(UserSkill.id).label("count")
-    ).join(Skill, UserSkill.skill_id == Skill.id).filter(UserSkill.type == "offered").group_by(Skill.name).order_by(db.func.count(UserSkill.id).desc()).limit(20).all()
+    ).join(Skill, UserSkill.skill_id == Skill.id).filter(
+        UserSkill.type == "offered",
+        Skill.status == "approved"
+    ).group_by(Skill.name).order_by(db.func.count(UserSkill.id).desc()).limit(20).all()
 
     data = {
         "total_users": total_users,
@@ -489,8 +469,18 @@ def get_user(user_id):
     if not user or user.is_banned:
         return jsonify({"error": "User not found"}), 404
 
-    offered = UserSkill.query.filter_by(user_id=user.id, type="offered").all()
-    wanted = UserSkill.query.filter_by(user_id=user.id, type="wanted").all()
+    offered = (
+        UserSkill.query
+        .join(Skill)
+        .filter(UserSkill.user_id == user.id, UserSkill.type == "offered", Skill.status == "approved")
+        .all()
+    )
+    wanted = (
+        UserSkill.query
+        .join(Skill)
+        .filter(UserSkill.user_id == user.id, UserSkill.type == "wanted", Skill.status == "approved")
+        .all()
+    )
     # NOTE: Availability is intentionally excluded from the public profile to
     # prevent leaking personal schedule information. It is only exposed on
     # the authenticated /api/users/profile (self) endpoint.

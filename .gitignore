@@ -31,3 +31,13 @@ debug_endpoint.py
 # OS
 .DS_Store
 Thumbs.db
+
+# Binary installers and disk images
+*.iso
+*.exe
+*.msi
+
+# Media generation and build artifacts
+brag-output/
+temp-hf/
+Reference Ui.jpeg

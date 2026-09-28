@@ -194,8 +194,8 @@ def user_skills(alice_client, socket_bob):
 
     app = alice_client.application
     with app.app_context():
-        python = Skill(name="Python", category="Programming")
-        react = Skill(name="React", category="Frontend")
+        python = Skill(name="Python", category="Programming", status="approved")
+        react = Skill(name="React", category="Frontend", status="approved")
         db.session.add_all([python, react])
         db.session.commit()
 

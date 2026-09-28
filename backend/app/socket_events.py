@@ -1,5 +1,6 @@
 """Socket.IO event handlers for real-time features."""
 
+import time
 from datetime import datetime, timezone
 from flask import session as flask_session, request
 from flask_login import current_user
@@ -10,6 +11,12 @@ from app.extensions import socketio, db
 # and stateless we don't need Redis — in-process is fine for portfolio scale.
 _typing_throttle: dict[str, float] = {}
 _TYPING_INTERVAL_SEC = 2.0  # minimum seconds between typing emits per user
+
+# In-memory per-user rolling window rate limiter for chat messages.
+# Mirrors the 30-per-minute limit on the REST endpoint in routes/swaps.py.
+_message_rate_limit: dict[str, list[float]] = {}
+_MESSAGE_WINDOW_SEC = 60.0
+_MESSAGE_MAX_PER_WINDOW = 30
 
 
 def register_socket_events():
@@ -51,6 +58,8 @@ def register_socket_events():
                 "user_id": user_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }, include_self=False)
+            _message_rate_limit.pop(user_id, None)
+            _typing_throttle.pop(user_id, None)
 
     @socketio.on("join")
     def handle_join(data):
@@ -97,14 +106,30 @@ def register_socket_events():
         if not swap_id or not content or not user_id:
             return
 
-        # Sanitize and hard cap per message — mirrors HTTP route validation
-        content = sanitize_text(content, max_length=5000)
-        if not content:
+        if len(content) > 2000:
+            socketio.emit("error", {"message": "Message too long (max 2000 characters)"}, room=f"user_{user_id}")
             return
 
         from app.utils.profanity import contains_profanity
         if contains_profanity(content):
             socketio.emit("error", {"message": "This message contains language that goes against our community guidelines."}, room=f"user_{user_id}")
+            return
+
+        # Rolling window rate limiter: max 30 messages per 60 seconds per user
+        now = time.monotonic()
+        cutoff = now - _MESSAGE_WINDOW_SEC
+        user_timestamps = [t for t in _message_rate_limit.get(user_id, []) if t > cutoff]
+        if len(user_timestamps) >= _MESSAGE_MAX_PER_WINDOW:
+            _message_rate_limit[user_id] = user_timestamps
+            socketio.emit("error", {"message": "You're sending messages too fast. Please slow down."}, room=f"user_{user_id}")
+            return
+
+        user_timestamps.append(now)
+        _message_rate_limit[user_id] = user_timestamps
+
+        # Sanitize and cap per message — mirrors HTTP route validation
+        content = sanitize_text(content, max_length=2000)
+        if not content:
             return
 
 
@@ -113,6 +138,9 @@ def register_socket_events():
         if not swap:
             return
         if swap.sender_id != user_id and swap.receiver_id != user_id:
+            return
+        if swap.status != "accepted":
+            socketio.emit("error", {"message": "Chat is only available for accepted swaps"}, room=f"user_{user_id}")
             return
 
         from app.models.chat import ChatMessage
@@ -152,6 +180,8 @@ def register_socket_events():
             return
         if swap.sender_id != user_id and swap.receiver_id != user_id:
             return
+        if swap.status != "accepted":
+            return
 
         partner_room = f"user_{swap.receiver_id}" if swap.sender_id == user_id else f"user_{swap.sender_id}"
         socketio.emit("user_typing", {
@@ -172,6 +202,8 @@ def register_socket_events():
         if not swap:
             return
         if swap.sender_id != user_id and swap.receiver_id != user_id:
+            return
+        if swap.status != "accepted":
             return
 
         partner_room = f"user_{swap.receiver_id}" if swap.sender_id == user_id else f"user_{swap.sender_id}"

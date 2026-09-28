@@ -1,25 +1,68 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
+import api, { setCsrfToken } from '@/lib/api'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, adminLogin } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isAdminMode, setIsAdminMode] = useState(false)
+
+  useEffect(() => {
+    api.get('/auth/csrf-token')
+      .then((res) => {
+        if (res.data?.csrf_token) setCsrfToken(res.data.csrf_token)
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
-      navigate('/dashboard')
+      try {
+        const tokenRes = await api.get('/auth/csrf-token')
+        if (tokenRes.data?.csrf_token) {
+          setCsrfToken(tokenRes.data.csrf_token)
+        }
+      } catch {
+        // Fallback to existing token
+      }
+
+      if (isAdminMode) {
+        await adminLogin(email, password)
+        navigate('/admin')
+      } else {
+        try {
+          await login(email, password)
+          navigate('/dashboard')
+        } catch (userErr: any) {
+          // If 401 on standard login, automatically attempt adminLogin
+          if (userErr.response?.status === 401) {
+            try {
+              await adminLogin(email, password)
+              navigate('/admin')
+              return
+            } catch {
+              throw userErr
+            }
+          }
+          throw userErr
+        }
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed')
+      const errMsg = err.response?.data?.error
+      if (err.response?.status === 429 || (err.response?.status === 500 && errMsg === 'An unexpected error occurred')) {
+        setError('Too many sign-in attempts. Please wait a moment and try again.')
+      } else {
+        setError(errMsg || 'Login failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -34,8 +77,30 @@ export default function Login() {
           <p className="text-text-muted mt-2">Learn together, grow together</p>
         </div>
 
-        <div className="glass-card p-8">
-          <h2 className="text-xl font-semibold mb-6">Sign in</h2>
+        <div className="bg-surface-alt border border-border shadow-xl rounded-3xl p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">{isAdminMode ? 'Admin Sign in' : 'Sign in'}</h2>
+            <div className="flex bg-surface rounded-xl p-1 border border-border">
+              <button
+                type="button"
+                onClick={() => { setIsAdminMode(false); setError(''); }}
+                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                  !isAdminMode ? 'bg-primary text-white' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                User
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIsAdminMode(true); setError(''); }}
+                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                  isAdminMode ? 'bg-primary text-white' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                Admin
+              </button>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -47,7 +112,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full glass-input px-3 py-2.5 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:border-primary/50"
                 required
               />
             </div>
@@ -61,7 +126,7 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full glass-input px-3 py-2.5 text-sm"
+                className="w-full bg-surface border border-border text-white px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:border-primary/50"
                 required
               />
             </div>
