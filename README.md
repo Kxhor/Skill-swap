@@ -37,19 +37,19 @@ The platform provides intelligent compatibility scoring through Google Gemini, b
 ## 3. Screenshots
 
 ### User Profile and Skill Matrix
-![User Profile](docs/screenshots/profile.jpeg)
+![User Profile](screenshots/profile.jpeg)
 
 ### Real-Time Chat and Messaging
-![Real-Time Chat](docs/screenshots/messages.jpeg)
+![Real-Time Chat](screenshots/messages.jpeg)
 
 ### Swap Requests Management
-![Swap Requests](docs/screenshots/swap_requests.jpeg)
+![Swap Requests](screenshots/swap_requests.jpeg)
 
 ### Partner Discovery and Profiles
-![Demo User Profile](docs/screenshots/demo_user_profile.jpeg)
+![Demo User Profile](screenshots/demo_user_profile.jpeg)
 
 ### Administrative Operations Dashboard
-![Admin Dashboard](docs/screenshots/admin_dashboard.jpeg)
+![Admin Dashboard](screenshots/admin_dashboard.jpeg)
 
 ***
 
