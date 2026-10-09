@@ -1,16 +1,17 @@
 <div align="center">
   <img src="frontend/public/logo.svg" alt="Skill Swap Logo" width="100" />
   <h1>Skill Swap</h1>
-  <p>An enterprise-grade peer-to-peer knowledge exchange and skill bartering platform featuring automated compatibility scoring and real-time collaboration.</p>
+  <p>An enterprise-grade peer-to-peer knowledge exchange platform featuring automated AI compatibility scoring and real-time collaboration.</p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
-  [![Flask](https://img.shields.io/badge/Flask-3.1-black.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
   [![React](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
+  [![Vite](https://img.shields.io/badge/Vite-5.0-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Flask](https://img.shields.io/badge/Flask-3.1-black.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
   [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1.svg?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
   [![Socket.IO](https://img.shields.io/badge/Socket.IO-Real--Time-010101.svg?logo=socketdotio&logoColor=white)](https://socket.io/)
+  [![Google Gemini](https://img.shields.io/badge/Google%20Gemini-Generative%20AI-4285F4.svg?logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
   [![Tests](https://img.shields.io/badge/Tests-142%20Passed-success.svg)](https://github.com/Kxhor/Skill-swap)
 </div>
 
@@ -18,32 +19,33 @@
 
 ## 1. Executive Summary
 
-Skill Swap is a production-ready, full-stack web application designed to facilitate decentralized skill sharing between peers. Rather than relying on monetary transactions, members exchange domain expertise in a structured barter model. Users offer specialized skills from their profile and discover complementary partners who possess the capabilities they want to learn.
+Skill Swap is a production-grade, decentralized platform designed for skill bartering between peers. Members exchange domain expertise without monetary transactions, offering proficiencies they possess to acquire competencies they want to learn.
 
-The platform provides intelligent compatibility scoring through Google Gemini, bidirectional swap negotiation workflows, WebSocket-driven instant messaging, session scheduling, community feedback loops, and an administrative control panel for moderation and platform telemetry.
+The system incorporates artificial intelligence matching via Google Gemini, bi-directional proposal negotiation, low-latency WebSocket messaging, session calendar coordination, and an administrative moderation portal.
 
 ***
 
-## 2. Architecture Overview
+## 2. System Architecture
 
-The platform uses a decoupled, event-driven client-server architecture built for high availability and low latency:
+Skill Swap implements a decoupled, event-driven architecture designed for high throughput, sub-100ms real-time messaging, and strong transactional integrity.
 
 ```text
 +-----------------------------------------------------------------+
 |                     Client Tier (React SPA)                    |
-|  - Framework: React 18, Vite, TypeScript, React Router DOM      |
-|  - State & Caching: TanStack Query (v5)                         |
-|  - UI & Primitives: Tailwind CSS v4, Radix UI, Lucide Icons     |
+|  - React 18, Vite, TypeScript, React Router DOM                 |
+|  - Data Layer: TanStack Query v5 (Optimistic Updates & Cache)   |
+|  - Design System: Tailwind CSS v4, Radix UI Primitives          |
 +-------------------------------+---------------------------------+
                                 |
-               HTTP REST APIs   |   WebSocket Channels
+               HTTP REST APIs   |   WebSocket Events
                (JSON Payloads)  |   (Socket.IO Protocol)
                                 |
 +-------------------------------+---------------------------------+
 |                     Application API Gateway                     |
-|  - Engine: Python Flask, Gevent WSGI, Flask-SocketIO            |
-|  - Security: Flask-WTF (CSRF), Flask-Limiter, Bleach Sanitizer  |
-|  - Identity: Flask-Login, Session Cookies, Bcrypt Hashes        |
+|  - Python Flask, Gevent WSGI Server, Flask-SocketIO             |
+|  - Rate Limiting: Flask-Limiter (Rolling Windows)               |
+|  - Security: Flask-WTF (CSRF Protection), Bleach Sanitizer      |
+|  - Identity: Flask-Login, Stateful Sessions, Bcrypt Hashing     |
 +-------------------------------+---------------------------------+
                                 |
          +----------------------+----------------------+
@@ -56,95 +58,92 @@ The platform uses a decoupled, event-driven client-server architecture built for
 +-----------------+
 ```
 
-### Technology Matrix
+### Architecture Specifications
 
-| Layer | Technology | Primary Role |
+| Subsystem | Components | Functional Responsibilities |
 | :--- | :--- | :--- |
-| **Frontend Core** | React 18, TypeScript, Vite | Single-page application runtime and type-safe components |
-| **State & Data Fetching** | TanStack React Query (v5) | Server-state caching, optimistic updates, and cache invalidation |
-| **Styling & Design System** | Tailwind CSS v4, Radix UI, Lucide Icons | Accessible primitives, dark theme, and glassmorphism styling |
-| **Backend Core** | Python 3.10+, Flask, Flask-SQLAlchemy | RESTful API controllers, business logic, and ORM abstractions |
-| **Real-Time Communication** | Flask-SocketIO, Socket.IO Client, Gevent | Instant messaging, active typing indicators, and presence tracking |
-| **Security & Hardening** | Flask-WTF, Flask-Limiter, Bleach, Bcrypt | CSRF token validation, rate throttling, and payload sanitization |
-| **Database & Migrations** | PostgreSQL, Alembic | Relational storage, referential integrity, and schema versioning |
-| **Artificial Intelligence** | Google Gemini API | Automated semantic skill matching and partner compatibility |
-| **Asset Storage** | Cloudinary | Cloud-hosted user profile imagery and media delivery |
+| **Frontend Runtime** | React 18, TypeScript, Vite | Single-page application rendering, routing, and UI interactions |
+| **Data Synchronization** | TanStack React Query (v5) | Query caching, optimistic state updates, and automated invalidation |
+| **Interface Styling** | Tailwind CSS v4, Radix UI, Lucide | Design token styling, keyboard navigation, and accessible overlays |
+| **API Backend** | Python 3.10+, Flask, SQLAlchemy | Application routing, business workflows, and ORM abstractions |
+| **Real-Time Gateway** | Flask-SocketIO, Gevent | Bi-directional chat channels, typing indicators, and presence updates |
+| **Security Controls** | Flask-WTF, Flask-Limiter, Bleach | Double-submit CSRF checks, rate limiting, and input sanitization |
+| **Persistence Layer** | PostgreSQL, Alembic | Relational data persistence, schema migrations, and relational integrity |
+| **AI Integration** | Google Gemini Generative AI | Semantic skill matrix analysis and compatibility percentage scoring |
+| **Media Delivery** | Cloudinary CDN | Asset optimization and avatar storage |
 
 ***
 
-## 3. Core Features
+## 3. Core Capabilities
 
 ### AI Compatibility Matching (Google Gemini)
-Profile attributes and skill sets are processed through Google Gemini to generate multidimensional compatibility scores. Users receive quantified compatibility ratings and analytical rationales highlighting shared strengths.
+Users' offered and desired skills are evaluated against peer profiles using Google Gemini. The algorithm assesses semantic relevance, skill complementarity, and learning goals to produce quantitative compatibility ratings accompanied by contextual rationale.
 
-### Real-Time Socket.IO Communication
-WebSocket channels enable instant chat sessions between verified swap participants. Features include real-time message delivery, live typing state broadcasts, online presence indicators, and unread notification counts.
+### Real-Time Bi-Directional Communication
+Persistent Socket.IO connections provide instant peer-to-peer messaging for accepted swap participants. Handlers include live message delivery, presence status (online/offline), typing broadcasts, and real-time unread notification badge updates.
 
-### Enterprise Authentication and Session Security
-The platform utilizes stateful session authentication managed by Flask-Login with salted Bcrypt password hashing. All mutating operations enforce double-submit CSRF token validation. Endpoint access is guarded by role-based authorization tiers.
-
-### Bidirectional Swap State Machine
-Proposals follow an explicit lifecycle state transition model:
-* `pending`: Proposal awaiting partner review.
+### Atomic Swap Lifecycle State Machine
+Swap proposals execute state transitions through atomic database updates with strict validation guards:
+* `pending`: Proposal created, awaiting response from recipient.
 * `accepted`: Swap terms confirmed; unlocks real-time messaging and scheduling.
-* `rejected`: Proposal declined by the receiver.
-* `cancelled`: Proposal rescinded by the sender prior to acceptance.
-* `completed`: Mutual confirmation of session fulfillment, unlocking review submission.
+* `rejected`: Recipient declined the proposal.
+* `cancelled`: Sender rescinded the proposal prior to recipient action.
+* `completed`: Both participants confirm session completion; unlocks review submission.
 
-### Dual Dashboard Architecture
-* **User Dashboard:** Centralized operations center for monitoring active swaps, responding to incoming partner requests, reviewing scheduled learning sessions, and tracking skill progression.
-* **Administrative Console:** Dedicated administration portal (`/admin`) providing system telemetry, user moderation, ban enforcement, and platform skill catalog management.
+### Dual-Portal Role Isolation
+* **User Workspace:** Personal dashboard for monitoring outgoing/incoming proposals, scheduled sessions, profile skill catalogs, and community reputation feedback.
+* **Administrative Operations Console (`/admin`):** Segregated control room providing system-wide telemetry, user account state enforcement (active/banned), and skill submission moderation (approval/rejection).
 
 ***
 
 ## 4. Screenshot Showcase
 
-### Dashboard and User Profile
-![User Profile](screenshots/profile.jpeg)
-*Personal profile view displaying offered skills, wanted competencies, availability windows, and community reputation statistics.*
+### Member Profile and Skills Matrix
+![Profile](screenshots/profile.jpeg)
+*Personal profile view with categorized skills, availability schedules, and reputation metrics.*
 
-### Partner Discovery and Compatibility Scoring
-![Partner Discovery](screenshots/demo_user_profile.jpeg)
-*Peer discovery screen showing semantic skill overlap, AI compatibility indicators, and direct swap proposal initiation.*
+### Partner Discovery and AI Compatibility
+![Demo User Profile](screenshots/demo_user_profile.jpeg)
+*Partner discovery view highlighting AI-driven compatibility scores and skill alignment details.*
 
-### Active Swap Request Pipeline
-![Swap Requests Management](screenshots/swap_requests.jpeg)
-*Structured pipeline showing incoming, outgoing, active, and historical skill exchange contracts across lifecycle stages.*
+### Swap Request Pipeline Management
+![Swap Requests](screenshots/swap_requests.jpeg)
+*Lifecycle management dashboard organizing incoming, outgoing, and completed skill swaps.*
 
 ### Real-Time Chat and Negotiation
-![Real-Time Messaging](screenshots/messages.jpeg)
-*Socket.IO messaging interface with typing notifications, session synchronization, and contextual swap details.*
+![Messages](screenshots/messages.jpeg)
+*Real-time Socket.IO chat workspace with live typing indicators and contextual swap metadata.*
 
-### Administrative Operations Center
-![Administrative Dashboard](screenshots/admin_dashboard.jpeg)
-*Telemetry and moderation hub displaying system-wide swap volume, active account controls, and user moderation tables.*
+### Administrative Control Center
+![Admin Dashboard](screenshots/admin_dashboard.jpeg)
+*Admin operations console displaying platform telemetry, user moderation, and skill approvals.*
 
 ***
 
 ## 5. Local Development Setup
 
-Follow these instructions to configure and execute the application in your local environment.
+Follow these steps to configure and run the project locally.
 
-### System Prerequisites
+### Prerequisites
 * **Node.js** (v18.0.0 or higher) and npm (v9.0.0 or higher)
 * **Python** (v3.10.0 or higher)
 * **Git** (v2.30.0 or higher)
 
-### Step 1: Clone the Repository
+### Step 1: Clone Repository
 
 ```bash
 git clone https://github.com/Kxhor/Skill-swap.git
 cd Skill-swap
 ```
 
-### Step 2: Backend Configuration and Startup
+### Step 2: Backend Setup
 
-1. Navigate to the backend directory:
+1. Change directory to `backend/`:
    ```bash
    cd backend
    ```
 
-2. Initialize a Python virtual environment:
+2. Create and activate a Python virtual environment:
    * **Linux / macOS:**
      ```bash
      python3 -m venv .venv
@@ -156,31 +155,31 @@ cd Skill-swap
      .venv\Scripts\Activate.ps1
      ```
 
-3. Install project dependencies:
+3. Install required Python packages:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Populate your local environment variables:
+4. Create local environment configuration:
    ```bash
    cp .env.example .env
    ```
-   *Note: For local testing, SQLite is supported automatically when `DATABASE_URL` is omitted.*
+   *Note: When no external PostgreSQL URL is provided, SQLite is used automatically for local testing.*
 
-5. Execute database schema migrations:
+5. Apply database schema migrations:
    ```bash
    python -m flask db upgrade
    ```
 
-6. Start the backend API service:
+6. Start backend development server:
    ```bash
    python run.py
    ```
-   The backend API will listen on `http://127.0.0.1:5005`.
+   The backend API will run on `http://127.0.0.1:5005`.
 
-### Step 3: Frontend Configuration and Startup
+### Step 3: Frontend Setup
 
-1. Open a new terminal session and navigate to the frontend directory:
+1. Open a new terminal window and navigate to `frontend/`:
    ```bash
    cd frontend
    ```
@@ -190,110 +189,66 @@ cd Skill-swap
    npm install
    ```
 
-3. Launch the Vite development server:
+3. Start Vite development server:
    ```bash
    npm run dev
    ```
-   The application interface will be available at `http://localhost:5173`.
+   The frontend interface will run on `http://localhost:5173`.
 
 ***
 
-## 6. Environment Configuration
+## 6. Environment Variable Reference
 
-Create a `.env` file inside the `backend/` directory based on the following template:
+The `backend/.env` file accepts the following parameters:
 
-| Variable Name | Required | Default / Example Value | Description |
+| Variable | Required | Default / Example Value | Description |
 | :--- | :--- | :--- | :--- |
-| `FLASK_ENV` | No | `development` | Runtime environment mode (`development`, `production`). |
-| `SECRET_KEY` | Yes | `generate-a-secure-random-key` | Cryptographic secret for signing session cookies and tokens. |
-| `DATABASE_URL` | No | `sqlite:///instance/skillswap.db` | PostgreSQL connection string or SQLite fallback. |
-| `CLOUDINARY_CLOUD_NAME` | No | `your-cloud-name` | Cloudinary account identifier for media storage. |
+| `FLASK_ENV` | No | `development` | Operational environment mode (`development`, `production`). |
+| `SECRET_KEY` | Yes | `generate-a-secure-random-key` | Cryptographic secret for signing session cookies. |
+| `DATABASE_URL` | No | `sqlite:///instance/skillswap.db` | PostgreSQL connection URI or SQLite fallback. |
+| `CLOUDINARY_CLOUD_NAME` | No | `your-cloud-name` | Cloudinary account identifier for media delivery. |
 | `CLOUDINARY_API_KEY` | No | `your-api-key` | Public API credential for Cloudinary. |
 | `CLOUDINARY_API_SECRET` | No | `your-api-secret` | Private API credential for Cloudinary. |
-| `GEMINI_API_KEY` | No | `your-gemini-api-key` | Google Gemini API key for compatibility scoring. |
-| `CORS_ALLOWED_ORIGINS` | No | `http://localhost:5173` | Comma-delimited list of authorized cross-origin domains. |
+| `GEMINI_API_KEY` | No | `your-gemini-api-key` | Google Gemini API key for compatibility calculations. |
+| `CORS_ALLOWED_ORIGINS` | No | `http://localhost:5173` | Comma-delimited list of permitted CORS origins. |
 
 ***
 
 ## 7. Pre-Configured Test Accounts
 
-The local development seed provides pre-configured user credentials for end-to-end evaluation:
+The local development seed provides pre-configured credentials for evaluation:
 
-| Account Type | Email Address | Password | Role & Functional Purpose |
+| Account Role | Email Address | Password | Permissions & Focus Area |
 | :--- | :--- | :--- | :--- |
-| **Primary Member** | `demo@example.com` | `password123` | Tests profile management and outgoing swap creation. |
-| **Partner Member** | `alice@example.com` | `password123` | Tests reciprocal proposal approval, real-time chat, and reviews. |
-| **Platform Administrator** | `admin@example.com` | `adminpassword123` | Accesses the `/admin` moderation and telemetry console. |
+| **Standard User** | `demo@example.com` | `password123` | Outgoing swap proposals and profile customization. |
+| **Partner User** | `alice@example.com` | `password123` | Inbound proposal approvals, real-time messaging, and reviews. |
+| **Platform Admin** | `admin@example.com` | `adminpassword123` | Access to the `/admin` moderation and telemetry portal. |
 
 ***
 
-## 8. Directory Layout
+## 8. Quality Assurance & Testing
 
-```text
-Skill-swap/
-├── backend/
-│   ├── app/
-│   │   ├── models/            # SQLAlchemy database entities
-│   │   ├── routes/            # REST API blueprint controllers
-│   │   ├── utils/             # Gemini matching, sanitization, validation
-│   │   ├── extensions.py      # Extension instances (db, limiter, socketio)
-│   │   └── socket_events.py   # WebSocket event handlers
-│   ├── migrations/            # Alembic database migration scripts
-│   ├── tests/                 # Automated pytest test suite
-│   ├── .env.example           # Backend environment variable template
-│   ├── requirements.txt       # Python package dependencies
-│   ├── run.py                 # Local development entry point
-│   └── wsgi.py                # Production WSGI application wrapper
-├── frontend/
-│   ├── public/                # Static assets and icons
-│   ├── src/
-│   │   ├── components/        # Reusable UI widgets and layout shells
-│   │   ├── context/           # React Context providers (Auth, Socket)
-│   │   ├── hooks/             # Custom TanStack Query hooks
-│   │   ├── lib/               # API client, utilities, and constants
-│   │   └── pages/             # Application route views
-│   ├── package.json           # Node.js dependencies and script definitions
-│   └── vite.config.ts         # Vite build configuration and proxy setup
-├── screenshots/               # Visual asset showcase for documentation
-├── .gitignore                 # Version control exclusions
-└── README.md                  # Project documentation
-```
+The codebase includes an automated regression test suite covering security boundaries, swap lifecycles, and data models.
 
-***
-
-## 9. Quality Assurance and Testing
-
-The repository includes a comprehensive test suite to prevent regressions across security boundaries, swap lifecycles, and data integrity.
-
-### Execute Backend Tests
+### Run Backend Tests
 
 ```bash
 cd backend
 pytest
 ```
-*Result: 142 integration tests validating authorization, rate limits, WebSocket protocols, and lifecycle constraints.*
+*Verification: 142 integration tests validating authentication, permission gates, socket events, and model constraints.*
 
-### Execute Frontend Production Build
+### Run Frontend Production Build
 
 ```bash
 cd frontend
 npm run build
 ```
-*Result: Enforces strict TypeScript compilation and builds minified production assets with zero diagnostics errors.*
+*Verification: Type checks TypeScript definitions and compiles optimized production bundles with zero diagnostics errors.*
 
 ***
 
-## 10. Security Controls
-
-* **Password Security:** Salted password hashing via Bcrypt; plaintext passwords are never persisted or logged.
-* **CSRF Mitigation:** Double-submit cookie verification via Flask-WTF on all mutating HTTP methods (`POST`, `PUT`, `DELETE`).
-* **Rate Limiting:** IP and user-based throttling managed by Flask-Limiter to defend against brute force and denial-of-service attempts.
-* **Input Sanitization:** User content filtered through Bleach prior to storage to prevent persistent cross-site scripting (XSS).
-* **Session Hardening:** Cookies issued with `HttpOnly`, `SameSite=Lax`, and secure session boundaries.
-
-***
-
-## 11. Engineering Team
+## 9. Engineering Team
 
 This project was engineered collaboratively by:
 
@@ -302,6 +257,6 @@ This project was engineered collaboratively by:
 
 ***
 
-## 12. License
+## 10. License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for complete details.
+This project is open-source software licensed under the MIT License. See the [LICENSE](LICENSE) file for complete details.
