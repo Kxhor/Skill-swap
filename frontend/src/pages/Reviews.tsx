@@ -38,9 +38,9 @@ export default function Reviews() {
 
   const completedSwaps = swaps?.filter((s: any) => s.status === 'completed') || []
   const feedbackList = feedbackData?.feedback || []
-  const feedbackSubmitted = new Set(
-    feedbackList.filter((f: any) => f.rater_id === me?.id).map((f: any) => f.swap_id)
-  )
+  const given = feedbackList.filter((f: any) => f.rater_id === me?.id)
+  const received = feedbackList.filter((f: any) => f.rated_id === me?.id)
+  const feedbackSubmitted = new Set(given.map((f: any) => f.swap_id))
 
   const [feedbackRatings, setFeedbackRatings] = useState<Record<string, number>>({})
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({})
@@ -117,15 +117,15 @@ export default function Reviews() {
                   </h2>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-text">{feedbackData?.average_rating ?? userProfile?.average_rating ?? '—'}</div>
-                    <div className="text-xs text-text-muted">{feedbackData?.rating_count ?? userProfile?.feedback_received_count ?? 0} reviews</div>
+                    <div className="text-xs text-text-muted">{feedbackData?.rating_count ?? userProfile?.feedback_received_count ?? received.length} reviews</div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {!feedbackList.length ? (
+                  {!received.length ? (
                     <p className="text-sm text-text-muted py-4">No reviews received yet.</p>
                   ) : (
-                    feedbackList.map((f: any) => (
+                    received.map((f: any) => (
                       <div key={f.id} className="border-b border-border last:border-0 pb-4 last:pb-0">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm text-text">{f.rater_name || 'Anonymous'}</span>
